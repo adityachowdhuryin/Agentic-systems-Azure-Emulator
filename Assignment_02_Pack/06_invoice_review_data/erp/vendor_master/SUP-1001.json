@@ -1,0 +1,11 @@
+{
+  "supplier_id": "SUP-1001",
+  "legal_name": "Meridian Fasteners Pty Ltd",
+  "remittance_email": "ap@meridianfasteners.example",
+  "status": "active",
+  "commercial_agreement": "standard",
+  "payment_terms": "NET30",
+  "primary_category": "Consumables",
+  "agreement_valid_from": "2025-07-01",
+  "agreement_valid_to": "2027-06-30"
+}

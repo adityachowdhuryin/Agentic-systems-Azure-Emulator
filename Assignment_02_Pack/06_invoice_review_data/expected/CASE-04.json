@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-04",
+  "invoice_number": "INV-04766",
+  "po_number": "PO-2026-4004",
+  "supplier_id": "SUP-1002",
+  "what_this_case_forces": "Unit price 4% over. General policy allows 5%; this supplier's negotiated agreement says 2%",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

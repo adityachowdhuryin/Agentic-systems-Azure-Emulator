@@ -1,0 +1,13 @@
+{
+  "grn_number": "GRN-2026-4001",
+  "po_number": "PO-2026-4001",
+  "supplier_id": "SUP-1001",
+  "received_on": "2026-08-02",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "BOLT-M8-50",
+      "quantity_received": 1000
+    }
+  ]
+}

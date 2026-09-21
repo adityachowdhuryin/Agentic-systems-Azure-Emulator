@@ -1,0 +1,304 @@
+{
+  "ts": 1789968146.500768,
+  "runs": {
+    "case03_email": {
+      "run_id": "RUN-2026-000026",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-EB924B8E7223",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-03_INV-03504",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review"
+    },
+    "case03_finding": {
+      "run_id": "RUN-2026-000026",
+      "use_case": "invoice_review",
+      "document_ref": "CASE-03_INV-03504",
+      "supplier_id": "SUP-1001",
+      "arrival_source": "case_email",
+      "dispatch_route": "sync",
+      "verdict": "exception:price_variance_over_tolerance",
+      "checks": [
+        {
+          "what": "PO match (PO number on invoice vs ERP)",
+          "result": "pass (invoice references PO-2026-4003; PO exists and is open)"
+        },
+        {
+          "what": "Three-way match \u2014 quantity (invoice vs PO vs goods receipt)",
+          "result": "pass (PO ordered 4000, GRN received 4000, invoice quantity 4000)"
+        },
+        {
+          "what": "Supplier status / commercial agreement",
+          "result": "pass (SUP-1001 active; commercial agreement = standard and valid 2025-07-01 to 2027-06-30)"
+        },
+        {
+          "what": "Price variance (invoice unit price vs PO unit price) per POL-AP-001",
+          "result": "fail \u2014 PO unit price 0.11 AUD vs invoice unit price 0.12 AUD \u2192 variance = 0.01 / 0.11 = 9.09% (exceeds 5% tolerance). Invoice requires escalation."
+        },
+        {
+          "what": "Aggregate invoice variance vs PO total",
+          "result": "fail/confirm escalate \u2014 PO total 440.00 AUD vs invoice total 492.80 AUD \u2192 difference 52.80 AUD = 12.0% of PO total (or 10.7% of invoice total); exceeds 5% threshold."
+        },
+        {
+          "what": "Invoice arithmetic consistency (unit_price * quantity vs reported line/total)",
+          "result": "issue noted \u2014 extracted unit_price (0.12) * quantity (4000) = 480.00 AUD, but extracted line_total/total_amount = 492.80 AUD. This mismatch requires review (possible additional charges or extraction error)."
+        },
+        {
+          "what": "Extractor field confidence",
+          "result": "acceptable \u2014 key extracted fields all >= 0.90 confidence, so values are likely correct, but the arithmetic inconsistency above is unresolved."
+        }
+      ],
+      "policy_ids": [
+        "POL-AP-001"
+      ],
+      "reasoning": "The invoice is three-way matched on quantity and the supplier/PO are valid, but the invoiced unit price (0.12 AUD) is 9.09% higher than the PO price (0.11 AUD), exceeding the 5% tolerance in POL-AP-001. Therefore the invoice should be escalated for review.",
+      "uncertainties": [
+        "Extracted line_total/total_amount (492.80 AUD) does not equal unit_price * quantity (0.12 * 4000 = 480.00 AUD). This could indicate an extraction error or additional invoice charges (taxes/fees) not captured in line-level fields \u2014 verify the source PDF.",
+        "Although extractor field confidences are >= 0.90, the numeric inconsistency above must be resolved before payment: confirm whether unit price, quantity, or line_total is correct on the original invoice."
+      ],
+      "raw_text": "Summary: Invoice INV-03504 (Meridian Fasteners SUP-1001) dated 2026-08-28 references PO-2026-4003. PO shows 4000 x NUT-M8 @ 0.11 AUD (PO line total 440.00 AUD). Goods receipt GRN-2026-4003 confirms 4000 received. Extracted invoice line shows 4000 x NUT-M8 @ 0.12 AUD (unit price higher than PO). Calculations: invoice unit price 0.12 vs PO 0.11 \u2192 unit price variance = (0.12-0.11)/0.11 = 9.09% (exceeds policy tolerance 5%). PO total 440.00 AUD vs extracted invoice total 492.80 AUD \u2192 invoice is 52.80 AUD (12.0% of PO total) higher. Policy: POL-AP-001 permits up to 5% supplier-unfavourable price variance; this invoice exceeds that and must be escalated. Note: extracted arithmetic inconsistency \u2014 0.12 * 4000 = 480.00 AUD, not 492.80 AUD \u2014 requires verifier to check the original PDF for additional charges (tax, freight) or re-run extraction. Recommendation: Escalate invoice for price-variance review per POL-AP-001 and verify the source invoice to resolve the line_total/total_amount mismatch before approving payment.",
+      "budget": {
+        "turns": 20,
+        "turns_used": 8,
+        "usd_cents": 100,
+        "usd_spent_cents": 8,
+        "seconds": 300
+      }
+    },
+    "case03_journal": {
+      "turns": 27,
+      "tools": [
+        "extract_invoice",
+        "extract_invoice",
+        "extract_invoice",
+        "get_purchase_order",
+        "get_purchase_order",
+        "get_purchase_order",
+        "get_goods_receipt",
+        "get_goods_receipt",
+        "get_goods_receipt",
+        "get_vendor",
+        "get_vendor",
+        "get_vendor",
+        "get_ap_history",
+        "get_ap_history",
+        "get_ap_history",
+        "search_policy",
+        "search_policy",
+        "search_policy",
+        "get_policy",
+        "get_policy",
+        "extract_invoice",
+        "extract_invoice",
+        "get_purchase_order",
+        "get_goods_receipt",
+        "get_vendor"
+      ]
+    },
+    "case03_chat": {
+      "run_id": "RUN-2026-000027",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-D5F41332FF05",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-03_INV-03504",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review"
+    },
+    "case05": {
+      "run_id": "RUN-2026-000028",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-DE2B1B8FCDB0",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-05_INV-05149",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review"
+    },
+    "case05_finding": {
+      "verdict": "exception:partial_invoice_requires_confirmation",
+      "uncertainties": [
+        "extractor total_amount confidence is low (0.572) despite a computed match; invoice-level total should be verified visually if required.",
+        "invoice extraction did not explicitly include unit of measure; UoM appears consistent by item code but is not separately confirmed in the invoice extract.",
+        "It is not confirmed whether the supplier will invoice the remaining 20 units or whether the order will be short-closed\u2014action required from the raising cost centre or supplier."
+      ],
+      "tools": [
+        "extract_invoice",
+        "extract_invoice",
+        "get_purchase_order",
+        "get_purchase_order",
+        "get_goods_receipt",
+        "get_goods_receipt",
+        "get_vendor",
+        "get_vendor",
+        "search_policy",
+        "get_ap_history",
+        "get_policy",
+        "search_policy",
+        "get_policy",
+        "get_policy",
+        "extract_invoice",
+        "extract_invoice",
+        "get_purchase_order",
+        "get_purchase_order",
+        "get_goods_receipt"
+      ]
+    },
+    "case02_async": {
+      "run_id": "RUN-2026-000029",
+      "state": "QUEUED",
+      "correlation_id": "CORR-08407D41B457",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-02_INV-02254",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review"
+    },
+    "sales_lead": {
+      "lead_id": "LEAD-A42C3D6A",
+      "event_id": "zoho-0fa4c226af",
+      "signature": "fd8b40f1be82c856566e604c904468471e800d6988ec79f4e3797c87903bd173",
+      "run_id": "RUN-2026-000030",
+      "state": "QUEUED",
+      "correlation_id": "CORR-AE92231D5D1A"
+    }
+  },
+  "checks": [
+    {
+      "name": "sync_case03_ingest",
+      "pass": true,
+      "detail": "status=200 state=FINDING_READY elapsed=67.6s run=RUN-2026-000026"
+    },
+    {
+      "name": "case03_finding_present",
+      "pass": true,
+      "detail": "verdict=exception:price_variance_over_tolerance arrival=case_email route=sync"
+    },
+    {
+      "name": "case03_arrival_is_email",
+      "pass": true,
+      "detail": "case_email"
+    },
+    {
+      "name": "case03_dispatch_sync",
+      "pass": true,
+      "detail": "sync"
+    },
+    {
+      "name": "case03_journal_nonempty",
+      "pass": true,
+      "detail": "turns=27"
+    },
+    {
+      "name": "case03_used_tools",
+      "pass": true,
+      "detail": "['extract_invoice', 'extract_invoice', 'extract_invoice', 'get_purchase_order', 'get_purchase_order', 'get_purchase_order', 'get_goods_receipt', 'get_goods_receipt', 'get_goods_receipt', 'get_vendor']"
+    },
+    {
+      "name": "case03_connector_results_present",
+      "pass": true,
+      "detail": "tool results after broker"
+    },
+    {
+      "name": "case03_replay_zero_cost",
+      "pass": true,
+      "detail": "{'run_id': 'RUN-2026-000026', 'turns': [{'turn_no': 1, 'saw': {'document_ref': 'CASE-01_INV-01431', 'supplier_id': 'SUP-1001', 'prior_tool_count': 0}, 'decided': 'model_error:Error code: 400 - {\\'error\\': {\\'message\\': \"Invalid value: \\'\\'. Supported values are: \\'additional_tools\\', \\'agent_message\\', \\'apply_patch_call\\', \\'apply_patch_call_output\\', \\'code_interpreter_call\\', \\'compaction\\', \\'compaction_trigger\\', \\'computer_call\\', \\'computer_call_output\\', \\'custom_tool_call\\', \\'custom_to"
+    },
+    {
+      "name": "case03_not_model_error",
+      "pass": true,
+      "detail": "exception:price_variance_over_tolerance"
+    },
+    {
+      "name": "case03_supplier_set",
+      "pass": true,
+      "detail": "SUP-1001"
+    },
+    {
+      "name": "chat_case03_ingest",
+      "pass": true,
+      "detail": "status=200 state=FINDING_READY elapsed=64.1s"
+    },
+    {
+      "name": "chat_arrival_source",
+      "pass": true,
+      "detail": "chat"
+    },
+    {
+      "name": "chat_same_document",
+      "pass": true,
+      "detail": "CASE-03_INV-03504"
+    },
+    {
+      "name": "chat_dispatch_sync",
+      "pass": true,
+      "detail": "sync"
+    },
+    {
+      "name": "sync_case05_ingest",
+      "pass": true,
+      "detail": "status=200 state=FINDING_READY elapsed=59.6s"
+    },
+    {
+      "name": "case05_finding_ok",
+      "pass": true,
+      "detail": "exception:partial_invoice_requires_confirmation"
+    },
+    {
+      "name": "t1_different_tool_order",
+      "pass": true,
+      "detail": "{'c03': ['extract_invoice', 'extract_invoice', 'extract_invoice', 'get_purchase_order', 'get_purchase_order', 'get_purchase_order'], 'c05': ['extract_invoice', 'extract_invoice', 'get_purchase_order', 'get_purchase_order', 'get_goods_receipt', 'get_goods_receipt']}"
+    },
+    {
+      "name": "t10_low_confidence_handled",
+      "pass": true,
+      "detail": "['extractor total_amount confidence is low (0.572) despite a computed match; invoice-level total should be verified visually if required.', 'invoice extraction did not explicitly include unit of measure; UoM appears consistent by item code but is not separately confirmed in the invoice extract.']"
+    },
+    {
+      "name": "worker_start",
+      "pass": true,
+      "detail": "{'worker_running': True}"
+    },
+    {
+      "name": "async_case02_enqueued",
+      "pass": true,
+      "detail": "status=200 state=QUEUED run=RUN-2026-000029"
+    },
+    {
+      "name": "async_case02_completed",
+      "pass": true,
+      "detail": "state=FINDING_READY"
+    },
+    {
+      "name": "async_dispatch_route",
+      "pass": true,
+      "detail": "async"
+    },
+    {
+      "name": "async_arrival_email",
+      "pass": true,
+      "detail": "case_email"
+    },
+    {
+      "name": "sales_lead_creates_run",
+      "pass": true,
+      "detail": "{'lead_id': 'LEAD-A42C3D6A', 'event_id': 'zoho-0fa4c226af', 'signature': 'fd8b40f1be82c856566e604c904468471e800d6988ec79f4e3797c87903bd173', 'run_id': 'RUN-2026-000030', 'state': 'QUEUED', 'correlation_id': 'CORR-AE92231D5D1A'}"
+    },
+    {
+      "name": "sales_lead_use_case",
+      "pass": true,
+      "detail": "sales_lead"
+    },
+    {
+      "name": "sales_lead_handed_off",
+      "pass": true,
+      "detail": "HANDED_OFF"
+    },
+    {
+      "name": "api_list_invoice_runs",
+      "pass": true,
+      "detail": "n=4"
+    }
+  ]
+}

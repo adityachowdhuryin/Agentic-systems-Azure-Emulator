@@ -1,0 +1,14 @@
+{
+  "supplier_id": "SUP-1004",
+  "invoices": [
+    {
+      "invoice_number": "OR-5540",
+      "invoice_date": "2026-06-22",
+      "total_amount": 740.0,
+      "po_reference": null,
+      "status": "paid",
+      "paid_on": "2026-07-20",
+      "note": "direct spend, no PO"
+    }
+  ]
+}

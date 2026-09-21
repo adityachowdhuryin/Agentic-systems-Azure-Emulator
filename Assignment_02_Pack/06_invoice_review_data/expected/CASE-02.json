@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-02",
+  "invoice_number": "INV-02254",
+  "po_number": "PO-2026-4002",
+  "supplier_id": "SUP-1001",
+  "what_this_case_forces": "Unit price 3% over; standard tolerance is 5%",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

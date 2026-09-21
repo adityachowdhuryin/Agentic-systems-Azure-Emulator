@@ -1,0 +1,53 @@
+{
+  "invoice_number": "INV-10474",
+  "supplier_id": "SUP-1002",
+  "supplier_name": "Caldera Components Ltd",
+  "invoice_date": "2026-08-28",
+  "currency": "AUD",
+  "po_reference": "PO-2026-4010",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "PLT-AL-3",
+      "quantity": 50,
+      "unit_price": 22.0,
+      "line_total": 1100.0
+    },
+    {
+      "line_no": 2,
+      "item_code": "PLT-AL-5",
+      "quantity": 40,
+      "unit_price": 31.0,
+      "line_total": 1240.0
+    },
+    {
+      "line_no": 3,
+      "item_code": "ROD-SS-10",
+      "quantity": 120,
+      "unit_price": 6.4,
+      "line_total": 768.0
+    },
+    {
+      "line_no": 4,
+      "item_code": "TUBE-CU-15",
+      "quantity": 200,
+      "unit_price": 4.72,
+      "line_total": 943.0
+    },
+    {
+      "line_no": 5,
+      "item_code": "SEAL-VT-25",
+      "quantity": 240,
+      "unit_price": 1.95,
+      "line_total": 468.0
+    },
+    {
+      "line_no": 6,
+      "item_code": "SPRG-C-08",
+      "quantity": 500,
+      "unit_price": 0.55,
+      "line_total": 275.0
+    }
+  ],
+  "total_amount": 4794.0
+}

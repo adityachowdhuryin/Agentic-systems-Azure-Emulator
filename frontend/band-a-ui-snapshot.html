@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Band A — Sales Lead Qualification (UI Snapshot)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #F4F6F5; --ink: #17211E; --ink-soft: #4A5551; --own: #0C6B58;
+      --own-tint: #E3F0EC; --invariant: #AE4326; --invariant-tint: #F7E9E3; --hairline: #C9D1CE;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .font-display { font-family: "Space Grotesk", sans-serif; }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+    .muted { color: var(--ink-soft); }
+    .own { color: var(--own); }
+    .wrap { max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem; }
+    .page-nav { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+    .page-nav button { font-family: "IBM Plex Mono", monospace; font-size: .75rem; padding: .5rem 1rem; border-radius: .375rem; border: 1px solid var(--hairline); background: #fff; cursor: pointer; }
+    .page-nav button.active { background: var(--own); color: #fff; border-color: var(--own); }
+    .page { display: none; }
+    .page.active { display: block; }
+    header { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    h1 { font-family: "Space Grotesk", sans-serif; font-size: 1.875rem; font-weight: 700; margin: .5rem 0; }
+    .card { background: #fff; border: 1px solid var(--hairline); border-radius: .375rem; padding: 1rem; }
+    .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: .75rem; margin-bottom: 2rem; }
+    .metric { text-align: center; }
+    .metric-val { font-family: "Space Grotesk", sans-serif; font-size: 1.5rem; font-weight: 700; }
+    .metric-label { font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--ink-soft); }
+    .grid-main { display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 2rem; }
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    .tab { padding: .25rem .75rem; border-radius: .25rem; font-family: "IBM Plex Mono", monospace; font-size: .875rem; text-transform: capitalize; border: 1px solid var(--hairline); background: #fff; }
+    .tab.active { background: var(--own); color: #fff; border-color: var(--own); }
+    .btn { width: 100%; padding: .5rem; border-radius: .25rem; font-weight: 500; font-size: .875rem; border: none; cursor: default; }
+    .btn-primary { background: var(--own); color: #fff; }
+    .btn-secondary { background: #fff; color: var(--own); border: 1px solid var(--own); }
+    .btn-danger { background: #fff; color: var(--invariant); border: 1px solid var(--invariant); }
+    .btn-outline-sm { font-family: "IBM Plex Mono", monospace; font-size: .75rem; border: 1px solid var(--hairline); background: #fff; padding: .25rem .75rem; border-radius: .25rem; color: var(--ink-soft); }
+    select, input[type=text] { width: 100%; border: 1px solid var(--hairline); border-radius: .25rem; padding: .25rem .5rem; font-size: .875rem; margin: .5rem 0; }
+    .badge { font-family: "IBM Plex Mono", monospace; font-size: .75rem; padding: .125rem .5rem; border-radius: 9999px; display: inline-block; }
+    .badge-own { background: var(--own-tint); color: var(--own); }
+    .badge-blue { background: #eff6ff; color: #1e40af; }
+    .badge-ink { background: var(--ink); color: #fff; }
+    .badge-invariant { background: var(--invariant-tint); color: var(--invariant); }
+    .badge-yellow { background: #fefce8; color: #854d0e; }
+    .badge-gray { background: #f3f4f6; color: #374151; }
+    .banner { border: 1px solid var(--own); background: var(--own-tint); color: var(--own); padding: .75rem 1rem; border-radius: .375rem; margin-bottom: 1rem; font-family: "IBM Plex Mono", monospace; font-size: .875rem; }
+    .demo-guide { background: #fff; border: 2px solid var(--own); border-radius: .375rem; margin-bottom: 2rem; overflow: hidden; }
+    .demo-guide-header { display: flex; justify-content: space-between; padding: .75rem 1rem; background: var(--own-tint); }
+    .demo-guide-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; color: var(--own); }
+    .demo-guide-count { margin-left: .75rem; font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--ink-soft); }
+    .demo-guide-body { padding: 1rem; }
+    .demo-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .75rem; }
+    .demo-step { border: 1px solid var(--hairline); border-radius: .375rem; padding: .75rem; }
+    .demo-step-label { display: flex; gap: .75rem; font-size: .875rem; }
+    .demo-step-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; margin-bottom: .25rem; }
+    .pipeline-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem; margin-bottom: 1.5rem; }
+    .stage-card { border-radius: .375rem; border: 2px solid var(--hairline); padding: .75rem; background: #fff; opacity: .85; }
+    .stage-done { border-color: var(--own); background: var(--own-tint); opacity: 1; }
+    .stage-failed { border-color: var(--invariant); background: var(--invariant-tint); }
+    .stage-num { font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--own); font-weight: 600; }
+    .stage-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: .875rem; margin-top: .25rem; }
+    .stage-desc { font-size: .75rem; color: var(--ink-soft); margin: .5rem 0; }
+    .stage-action { font-family: "IBM Plex Mono", monospace; font-size: .75rem; }
+    .stage-action.ok { color: var(--own); }
+    .stage-action.fail { color: var(--invariant); }
+    .band-b { margin-top: 1rem; border-radius: .375rem; border: 2px dashed var(--hairline); padding: 1rem; text-align: center; background: #fff; }
+    .band-b-done { border-style: solid; border-color: var(--own); background: var(--ink); color: #fff; }
+    .band-b-done p { color: var(--own-tint); }
+    .band-b-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; }
+    .timeline { max-height: 16rem; overflow-y: auto; }
+    .timeline-row { display: flex; gap: .75rem; font-size: .875rem; border-bottom: 1px solid var(--hairline); padding-bottom: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+    .timeline-time { font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--ink-soft); white-space: nowrap; }
+    .timeline-stage { font-family: "IBM Plex Mono", monospace; font-size: .75rem; text-transform: uppercase; }
+    .timeline-stage.ok { color: var(--own); }
+    .timeline-stage.fail { color: var(--invariant); font-weight: 600; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { text-align: left; font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--ink-soft); border-bottom: 1px solid var(--hairline); padding: .5rem 0; }
+    td { border-bottom: 1px solid var(--hairline); padding: .5rem 0; }
+    tr:hover { background: rgba(244,246,245,.5); }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+    .mono-xs { font-family: "IBM Plex Mono", monospace; font-size: .75rem; }
+    .link { color: var(--own); text-decoration: underline; }
+    .mail-dl { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1.5rem; font-family: "IBM Plex Mono", monospace; font-size: .875rem; margin-bottom: 1rem; }
+    .mail-dl dt { font-size: .75rem; color: var(--ink-soft); text-transform: uppercase; }
+    .mail-body { border: 1px solid var(--hairline); border-radius: .375rem; background: var(--paper); padding: .75rem; max-height: 18rem; overflow-y: auto; font-size: .875rem; white-space: pre-wrap; }
+    .view-tabs { display: flex; gap: .25rem; }
+    .view-tab { padding: .25rem .5rem; font-family: "IBM Plex Mono", monospace; font-size: .75rem; border-radius: .25rem; border: 1px solid var(--hairline); background: var(--own); color: #fff; }
+    .view-tab.inactive { background: #fff; color: var(--ink); }
+    .section-title { font-family: "Space Grotesk", sans-serif; font-weight: 600; margin: 0 0 .75rem; }
+    .watch-run { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+    .header-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; }
+    .snapshot-note { font-family: "IBM Plex Mono", monospace; font-size: .75rem; color: var(--ink-soft); background: #fff; border: 1px dashed var(--hairline); padding: .75rem 1rem; border-radius: .375rem; margin-bottom: 1.5rem; }
+    @media (max-width: 900px) {
+      .grid-6 { grid-template-columns: repeat(3, 1fr); }
+      .grid-main, .grid-2, .pipeline-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="snapshot-note">Static UI snapshot generated 2026-09-02 16:59:03 from live API data. Interactive app: <a href="http://127.0.0.1:5173">http://127.0.0.1:5173</a></div>
+
+    <nav class="page-nav">
+      <button type="button" class="active" onclick="showPage('dashboard')">Dashboard</button>
+      <button type="button" onclick="showPage('run-detail')">Run Detail — RUN-2026-000008</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <header>
+        <div class="mono muted" style="font-size:.75rem;letter-spacing:.1em;text-transform:uppercase">Agentic Systems Lab · Local Emulator</div>
+        <h1>Sales Lead Qualification — <span class="own">Band A</span> Runtime</h1>
+        <p class="muted">Local emulator of Entry &amp; Control. No Azure, no real Zoho/Teams.</p>
+        <div class="header-row">
+          <label class="mono" style="font-size:.875rem">Tenant: <select style="width:auto;display:inline-block"><option>company-a</option><option>company-b</option></select></label>
+          <button type="button" class="btn btn-danger" style="width:auto;padding:.25rem 1rem;font-size:.875rem">Reset Demo</button>
+        </div>
+      </header>
+
+      <div class="banner">New email received → RUN-2026-000008</div>
+
+      
+    <section class="demo-guide">
+      <div class="demo-guide-header">
+        <div><span class="demo-guide-title">Demo Guide</span><span class="demo-guide-count">0/9 steps complete</span></div>
+        <span class="mono own">Hide</span>
+      </div>
+      <div class="demo-guide-body">
+        <p class="muted">Follow these steps to demo Band A to a reviewer. Check off each step as you go.</p>
+        <ol class="demo-steps">
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">1. Zoho happy path</div>
+              <div><span class="mono own">Click:</span> Zoho tab → New Lead → Band A (once)</div>
+              <div class="muted"><span class="mono">Say:</span> Creates a brand-new lead ID and enters Band A.</div>
+              <div class="muted"><span class="mono">Expect:</span> Pipeline shows Ingress → Admission → Run → Dispatch → Queue</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">2. Teams same pipeline</div>
+              <div><span class="mono own">Click:</span> Teams tab → Ask Teams to Qualify Lead</div>
+              <div class="muted"><span class="mono">Say:</span> A salesperson asks manually — same Band A path.</div>
+              <div class="muted"><span class="mono">Expect:</span> New run created through identical pipeline stages</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">3. Scheduler sweep</div>
+              <div><span class="mono own">Click:</span> Scheduler tab → Run Scheduler Now</div>
+              <div class="muted"><span class="mono">Say:</span> Pending leads are picked up automatically.</div>
+              <div class="muted"><span class="mono">Expect:</span> Multiple runs created</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">4. Invalid auth</div>
+              <div><span class="mono own">Click:</span> Test Admission Controls → Invalid Auth</div>
+              <div class="muted"><span class="mono">Say:</span> Bad identity is rejected before a run exists.</div>
+              <div class="muted"><span class="mono">Expect:</span> rejected: true, run_created: false</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">5. Duplicate event</div>
+              <div><span class="mono own">Click:</span> Test Admission Controls → Duplicate Event</div>
+              <div class="muted"><span class="mono">Say:</span> Same event_id returns the existing run safely.</div>
+              <div class="muted"><span class="mono">Expect:</span> duplicate: true, same run_id both times</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">5b. Resend webhook (active run)</div>
+              <div><span class="mono own">Click:</span> Worker OFF → Send Webhook twice for same lead</div>
+              <div class="muted"><span class="mono">Say:</span> Rejection while first run is still active.</div>
+              <div class="muted"><span class="mono">Expect:</span> Rejected banner; active_run_blocked</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">6. Queue backlog</div>
+              <div><span class="mono own">Click:</span> Worker OFF → create leads → Worker ON</div>
+              <div class="muted"><span class="mono">Say:</span> Band A finishes at the queue; Band B drains when available.</div>
+              <div class="muted"><span class="mono">Expect:</span> Pending count rises then drains</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">7. Multi-tenant</div>
+              <div><span class="mono own">Click:</span> Switch to company-b → qualify LEAD-10007</div>
+              <div class="muted"><span class="mono">Say:</span> Each tenant has isolated quota.</div>
+              <div class="muted"><span class="mono">Expect:</span> Run created for company-b lead</div>
+            </div>
+          </label>
+        </li>
+        <li class="demo-step">
+          <label class="demo-step-label">
+            <input type="checkbox" disabled />
+            <div>
+              <div class="demo-step-title">8. Reset demo</div>
+              <div><span class="mono own">Click:</span> Header → Reset Demo</div>
+              <div class="muted"><span class="mono">Say:</span> Restore clean seed state.</div>
+              <div class="muted"><span class="mono">Expect:</span> Metrics and tables return to initial seed data</div>
+            </div>
+          </label>
+        </li></ol>
+        <button type="button" class="btn-outline-sm" disabled>Reset checklist</button>
+      </div>
+    </section>
+
+      <div class="grid-6">
+        <div class="card metric"><div class="metric-val">15</div><div class="metric-label">Leads</div></div>
+        <div class="card metric"><div class="metric-val">8</div><div class="metric-label">Active Runs</div></div>
+        <div class="card metric"><div class="metric-val">8</div><div class="metric-label">Queued</div></div>
+        <div class="card metric"><div class="metric-val">0</div><div class="metric-label">Handoffs</div></div>
+        <div class="card metric"><div class="metric-val">5</div><div class="metric-label">Rejected</div></div>
+        <div class="card metric"><div class="metric-val">0</div><div class="metric-label">Failed</div></div>
+      </div>
+
+      <section class="grid-main">
+        <div class="card">
+          <h2 class="section-title">Entry Points</h2>
+          <div class="tabs">
+            <span class="tab active">zoho</span>
+            <span class="tab">teams</span>
+            <span class="tab">scheduler</span>
+          </div>
+          <p class="muted" style="font-size:.75rem">Zoho Simulator — Local</p>
+          <p class="muted" style="font-size:.75rem"><span class="mono own">New Lead → Band A</span> creates a <strong>new lead ID every click</strong>.</p>
+          <button type="button" class="btn btn-primary" style="margin-top:.5rem">New Lead → Band A</button>
+          <select><option>LEAD-954F47B2 — Example (active: RUN-2026-000008)</option><option>LEAD-27AE271D — Gmail (active: RUN-2026-000007)</option><option>LEAD-43830F18 — Gmail (active: RUN-2026-000006)</option><option>LEAD-EB5086FC — Gmail (active: RUN-2026-000005)</option><option>LEAD-0FD0A45B — Gmail (active: RUN-2026-000003)</option><option>LEAD-D6650B24 — Gmail (active: RUN-2026-000002)</option><option>LEAD-1D84010A — Gmail (active: RUN-2026-000001)</option><option>LEAD-10006 — EduSphere</option></select>
+          <p class="mono own" style="font-size:.75rem">Active run: RUN-2026-000008 — resending should reject</p>
+          <button type="button" class="btn btn-secondary">Send Webhook — LEAD-954F47B2</button>
+        </div>
+
+        <div class="card">
+          <div class="watch-run">
+            <h2 class="section-title" style="margin:0">Band A Pipeline</h2>
+            <label class="mono" style="font-size:.75rem">Watch run: <select style="width:auto;max-width:220px"><option selected>RUN-2026-000008 (zoho)</option><option>RUN-2026-000007 (zoho)</option><option>RUN-2026-000006 (zoho)</option><option>RUN-2026-000005 (zoho)</option><option>RUN-2026-000004 (zoho)</option><option>RUN-2026-000003 (zoho)</option><option>RUN-2026-000002 (zoho)</option><option>RUN-2026-000001 (zoho)</option></select></label>
+          </div>
+          
+    <div class="pipeline-grid">
+        <div class="stage-card stage-done">
+          <div class="stage-num">01</div>
+          <div class="stage-title">Ingress Edge</div>
+          <p class="stage-desc">Accepts the arrival, validates the envelope, stores the raw event.</p>
+          <div class="stage-actions"><div class="stage-action ok">✓ request received</div><div class="stage-action ok">✓ raw payload stored</div><div class="stage-action ok">✓ acknowledged</div></div>
+        </div>
+        <div class="stage-card stage-done">
+          <div class="stage-num">02</div>
+          <div class="stage-title">Admission Control</div>
+          <p class="stage-desc">Decides whether this request may proceed.</p>
+          <div class="stage-actions"><div class="stage-action ok">✓ authenticate</div><div class="stage-action ok">✓ resolve tenant</div><div class="stage-action ok">✓ deduplicate</div><div class="stage-action ok">✓ active run check</div><div class="stage-action ok">✓ admit budget</div></div>
+        </div>
+        <div class="stage-card stage-done">
+          <div class="stage-num">03</div>
+          <div class="stage-title">Run Manager</div>
+          <p class="stage-desc">Turns the admitted request into a trackable run.</p>
+          <div class="stage-actions"><div class="stage-action ok">✓ run created</div></div>
+        </div>
+        <div class="stage-card stage-done">
+          <div class="stage-num">04</div>
+          <div class="stage-title">Dispatcher</div>
+          <p class="stage-desc">Chooses how the run should proceed.</p>
+          <div class="stage-actions"><div class="stage-action ok">✓ async selected</div></div>
+        </div>
+        <div class="stage-card stage-done">
+          <div class="stage-num">05</div>
+          <div class="stage-title">Message Transport</div>
+          <p class="stage-desc">Durably carries async work to another process.</p>
+          <div class="stage-actions"><div class="stage-action ok">✓ enqueued</div></div>
+        </div></div>
+    <div class="band-b band-b-wait">
+      <div class="band-b-title">BAND B — Reasoning &amp; Action</div>
+      <p>Waiting for async handoff via Message Transport…</p>
+    </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:2rem">
+        <h2 class="section-title">Watch Run</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;font-family:'IBM Plex Mono',monospace;font-size:.875rem">
+          <div>Run ID: <span class="link">RUN-2026-000008</span></div>
+          <div>Source: zoho</div>
+          <div>Lead: LEAD-954F47B2</div>
+          <div>State: <span class="badge badge-blue">QUEUED</span></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:2rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
+          <h2 class="section-title" style="margin:0">Received Email (Zoho Webhook)</h2>
+          <div class="view-tabs">
+            <span class="view-tab">plain</span>
+            <span class="view-tab inactive">html</span>
+            <span class="view-tab inactive">raw</span>
+          </div>
+        </div>
+        <dl class="mail-dl">
+          <div><dt>From</dt><dd>unknown@example.com</dd></div>
+          <div><dt>To</dt><dd></dd></div>
+          <div style="grid-column:1/-1"><dt>Subject</dt><dd></dd></div>
+          <div><dt>Message ID</dt><dd style="font-size:.75rem">zoho-mail-c65f37b2cb1a</dd></div>
+          <div><dt>Received</dt><dd>2026-09-02T11:19:54.475075</dd></div>
+        </dl>
+        <div class="mail-body">Inbound email inquiry</div>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <h2 class="section-title">Event Timeline</h2>
+          <div class="timeline">
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>request received</span>
+          <span class="muted truncate"> — Request from zoho</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>raw payload stored</span>
+          <span class="muted truncate"> — Inbound event zoho-mail-c65f37b2cb1a stored</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>acknowledged</span>
+          <span class="muted truncate"> — Ingress normalization complete</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>authenticate</span>
+          <span class="muted truncate"> — Authenticated as zoho-mail-bridge</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>resolve tenant</span>
+          <span class="muted truncate"> — Tenant resolved: company-a</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>deduplicate</span>
+          <span class="muted truncate"> — No duplicate detected</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>active run check</span>
+          <span class="muted truncate"> — No active run blocking lead LEAD-954F47B2</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>admit budget</span>
+          <span class="muted truncate"> — Budget OK: 8/100</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">RUN_MANAGER</span>
+          <span>run created</span>
+          <span class="muted truncate"> — Run RUN-2026-000008 created with state ADMITTED</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">DISPATCHER</span>
+          <span>async selected</span>
+          <span class="muted truncate"> — ASYNC — qualification may take longer and caller does not wait</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">MESSAGE_TRANSPORT</span>
+          <span>enqueued</span>
+          <span class="muted truncate"> — Message MSG-8B7CC6D6C86B enqueued to sales-lead-qualification</span>
+        </div></div>
+        </div>
+        <div class="card">
+          <h2 class="section-title">Queue</h2>
+          <p class="mono" style="font-size:.875rem;margin-bottom:.75rem">Pending: 8 · Processing: 0 · Worker: OFF</p>
+          <div style="display:flex;gap:.5rem">
+            <button type="button" class="btn btn-secondary" style="width:auto;font-size:.75rem;padding:.25rem .75rem">Worker ON</button>
+            <button type="button" class="btn btn-secondary" style="width:auto;font-size:.75rem;padding:.25rem .75rem">Worker OFF</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:2rem">
+        <h2 class="section-title">Test Admission Controls</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+          <button type="button" class="btn btn-danger" style="width:auto;font-size:.875rem;padding:.25rem .75rem">Invalid Auth</button>
+          <button type="button" class="btn btn-danger" style="width:auto;font-size:.875rem;padding:.25rem .75rem">Wrong Tenant</button>
+          <button type="button" class="btn btn-danger" style="width:auto;font-size:.875rem;padding:.25rem .75rem">Duplicate Event</button>
+          <button type="button" class="btn btn-danger" style="width:auto;font-size:.875rem;padding:.25rem .75rem">Quota Exceeded</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Leads</h2>
+        <table>
+          <thead><tr><th>Lead ID</th><th>Company</th><th>Industry</th><th>Budget</th><th>Status</th><th>Active Run</th></tr></thead>
+          <tbody>
+        <tr>
+          <td class="mono">LEAD-954F47B2</td>
+          <td>Example</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000008</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-27AE271D</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000007</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-43830F18</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000006</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-EB5086FC</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000005</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-0FD0A45B</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000003</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-D6650B24</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000002</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-1D84010A</td>
+          <td>Gmail</td>
+          <td>Unknown</td>
+          <td>₹0.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000001</span></td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10006</td>
+          <td>EduSphere</td>
+          <td>Education</td>
+          <td>₹4.0L</td>
+          <td><span class="badge badge-gray">NEW</span></td>
+          <td class="mono-xs">—</td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10005</td>
+          <td>HealthBridge</td>
+          <td>Healthcare</td>
+          <td>₹60.0L</td>
+          <td><span class="badge badge-own">PENDING_QUALIFICATION</span></td>
+          <td class="mono-xs">—</td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10004</td>
+          <td>MetroLogix</td>
+          <td>Logistics</td>
+          <td>₹15.0L</td>
+          <td><span class="badge badge-gray">NEW</span></td>
+          <td class="mono-xs">—</td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10003</td>
+          <td>GreenGrid Energy</td>
+          <td>Energy</td>
+          <td>₹35.0L</td>
+          <td><span class="badge badge-gray">NEW</span></td>
+          <td class="mono-xs">—</td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10002</td>
+          <td>Nova Retail</td>
+          <td>Retail</td>
+          <td>₹8.0L</td>
+          <td><span class="badge badge-own">PENDING_QUALIFICATION</span></td>
+          <td class="mono-xs">—</td>
+        </tr>
+        <tr>
+          <td class="mono">LEAD-10001</td>
+          <td>ABC Technologies</td>
+          <td>Banking</td>
+          <td>₹50.0L</td>
+          <td><span class="badge badge-blue">QUALIFICATION_IN_PROGRESS</span></td>
+          <td class="mono-xs"><span class="link">RUN-2026-000004</span></td>
+        </tr></tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- RUN DETAIL -->
+    <div id="page-run-detail" class="page">
+      <a href="#" class="link mono" style="font-size:.875rem" onclick="showPage('dashboard');return false">← Dashboard</a>
+      <h1 class="font-display" style="font-size:1.5rem;margin-top:1rem">Run Detail</h1>
+
+      <div class="card" style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-family:'IBM Plex Mono',monospace;font-size:.875rem">
+        <div>Run ID: RUN-2026-000008</div>
+        <div>Lead ID: LEAD-954F47B2</div>
+        <div>Tenant: company-a</div>
+        <div>Source: zoho</div>
+        <div>Trigger: zoho_webhook</div>
+        <div>Owner: zoho-mail-bridge</div>
+        <div>State: <span class="badge badge-blue">QUEUED</span></div>
+        <div>Correlation: CORR-7DE99C3C71F9</div>
+        <div>Created: 2026-09-02T11:19:54.477113</div>
+      </div>
+
+      <section class="card" style="margin-top:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+          <h2 class="section-title" style="margin:0">Received Email (Zoho Webhook)</h2>
+          <div class="view-tabs"><span class="view-tab">plain</span><span class="view-tab inactive">html</span><span class="view-tab inactive">raw</span></div>
+        </div>
+        <dl class="mail-dl">
+          <div><dt>From</dt><dd>unknown@example.com</dd></div>
+          <div><dt>To</dt><dd></dd></div>
+          <div style="grid-column:1/-1"><dt>Subject</dt><dd></dd></div>
+        </dl>
+        <div class="mail-body">Inbound email inquiry</div>
+      </section>
+
+      <section class="card" style="margin-top:1.5rem">
+        <h2 class="section-title">Event Timeline</h2>
+        <div class="timeline">
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>request received</span>
+          <span class="muted truncate"> — Request from zoho</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>raw payload stored</span>
+          <span class="muted truncate"> — Inbound event zoho-mail-c65f37b2cb1a stored</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">INGRESS</span>
+          <span>acknowledged</span>
+          <span class="muted truncate"> — Ingress normalization complete</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>authenticate</span>
+          <span class="muted truncate"> — Authenticated as zoho-mail-bridge</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>resolve tenant</span>
+          <span class="muted truncate"> — Tenant resolved: company-a</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>deduplicate</span>
+          <span class="muted truncate"> — No duplicate detected</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>active run check</span>
+          <span class="muted truncate"> — No active run blocking lead LEAD-954F47B2</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">ADMISSION</span>
+          <span>admit budget</span>
+          <span class="muted truncate"> — Budget OK: 8/100</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">RUN_MANAGER</span>
+          <span>run created</span>
+          <span class="muted truncate"> — Run RUN-2026-000008 created with state ADMITTED</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">DISPATCHER</span>
+          <span>async selected</span>
+          <span class="muted truncate"> — ASYNC — qualification may take longer and caller does not wait</span>
+        </div>
+        <div class="timeline-row">
+          <span class="timeline-time">11:19:54</span>
+          <span class="timeline-stage ok">MESSAGE_TRANSPORT</span>
+          <span>enqueued</span>
+          <span class="muted truncate"> — Message MSG-8B7CC6D6C86B enqueued to sales-lead-qualification</span>
+        </div></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.page-nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById('page-' + id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-07",
+  "invoice_number": "INV-07940",
+  "po_number": null,
+  "supplier_id": "SUP-1004",
+  "what_this_case_forces": "No PO reference. Professional Services under threshold \u2014 direct spend is permitted",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-08",
+  "invoice_number": "INV-08648",
+  "po_number": null,
+  "supplier_id": "SUP-1005",
+  "what_this_case_forces": "No PO reference. Raw Materials \u2014 direct spend is not permitted for this category",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

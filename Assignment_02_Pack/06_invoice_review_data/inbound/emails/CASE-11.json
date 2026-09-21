@@ -1,0 +1,21 @@
+{
+  "message_id": "<case-11@northvalepack.example>",
+  "from": "accounts@northvalepack.example",
+  "to": "ap-inbox@giantleap-lab.example",
+  "subject": "Invoice INV-11696 - Northvale Packaging",
+  "received_at": "2026-08-29T09:14:00+10:00",
+  "body_text": "Please find attached invoice INV-11696 for recent supply.\n\nRegards\nAccounts, Northvale Packaging",
+  "attachments": [
+    {
+      "filename": "INV-11696.pdf",
+      "document_ref": "CASE-11_INV-11696",
+      "content_type": "application/pdf",
+      "note": "The stored document. Call extract_invoice(document_ref) to read it \u2014 do not open it directly."
+    }
+  ],
+  "auth_results": {
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass"
+  }
+}

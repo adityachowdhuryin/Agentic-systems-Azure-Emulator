@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-09",
+  "invoice_number": "INV-01417",
+  "po_number": "PO-2026-4009",
+  "supplier_id": "SUP-1001",
+  "what_this_case_forces": "Same invoice number as one already processed three weeks ago",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-06",
+  "invoice_number": "INV-06174",
+  "po_number": "PO-2026-4006",
+  "supplier_id": "SUP-1001",
+  "what_this_case_forces": "Invoiced 110 against a PO for 100; receipt confirms 110 delivered",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

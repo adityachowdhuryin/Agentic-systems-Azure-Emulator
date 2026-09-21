@@ -1,0 +1,18 @@
+{
+  "po_number": "PO-2026-4012",
+  "supplier_id": "SUP-1002",
+  "status": "open",
+  "raised_on": "2026-07-14",
+  "currency": "AUD",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "FLTR-CART",
+      "description": "Filter cartridge",
+      "quantity_ordered": 100,
+      "unit_price": 54.0,
+      "unit_of_measure": "case_of_12",
+      "line_total": 5400.0
+    }
+  ]
+}

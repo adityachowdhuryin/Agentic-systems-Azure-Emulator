@@ -1,0 +1,11 @@
+{
+  "supplier_id": "SUP-1004",
+  "legal_name": "Orbis Industrial Services",
+  "remittance_email": "invoices@orbisindustrial.example",
+  "status": "active",
+  "commercial_agreement": "standard",
+  "payment_terms": "NET30",
+  "primary_category": "Professional Services",
+  "agreement_valid_from": "2025-07-01",
+  "agreement_valid_to": "2027-06-30"
+}

@@ -1,0 +1,21 @@
+{
+  "message_id": "<case-08@trellischem.example>",
+  "from": "ar@trellischem.example",
+  "to": "ap-inbox@giantleap-lab.example",
+  "subject": "Invoice INV-08648 - Trellis Chemicals",
+  "received_at": "2026-08-29T09:14:00+10:00",
+  "body_text": "Please find attached invoice INV-08648 for recent supply.\n\nRegards\nAccounts, Trellis Chemicals",
+  "attachments": [
+    {
+      "filename": "INV-08648.pdf",
+      "document_ref": "CASE-08_INV-08648",
+      "content_type": "application/pdf",
+      "note": "The stored document. Call extract_invoice(document_ref) to read it \u2014 do not open it directly."
+    }
+  ],
+  "auth_results": {
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass"
+  }
+}

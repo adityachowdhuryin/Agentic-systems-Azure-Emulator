@@ -1,0 +1,12 @@
+{
+  "supplier_id": "SUP-1002",
+  "legal_name": "Caldera Components Ltd",
+  "remittance_email": "billing@calderacomponents.example",
+  "status": "active",
+  "commercial_agreement": "negotiated",
+  "payment_terms": "NET45",
+  "primary_category": "Consumables",
+  "agreement_valid_from": "2025-07-01",
+  "agreement_valid_to": "2027-06-30",
+  "negotiated_price_tolerance_pct": 2.0
+}

@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-01",
+  "invoice_number": "INV-01431",
+  "po_number": "PO-2026-4001",
+  "supplier_id": "SUP-1001",
+  "what_this_case_forces": "Clean \u2014 matches the PO exactly",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

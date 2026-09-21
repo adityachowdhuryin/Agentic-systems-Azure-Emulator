@@ -1,0 +1,18 @@
+{
+  "invoice_number": "INV-06174",
+  "supplier_id": "SUP-1001",
+  "supplier_name": "Meridian Fasteners Pty Ltd",
+  "invoice_date": "2026-08-28",
+  "currency": "AUD",
+  "po_reference": "PO-2026-4006",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "GSKT-60",
+      "quantity": 110,
+      "unit_price": 1.85,
+      "line_total": 203.5
+    }
+  ],
+  "total_amount": 203.5
+}

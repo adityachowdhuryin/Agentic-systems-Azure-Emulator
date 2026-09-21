@@ -1,0 +1,21 @@
+{
+  "message_id": "<case-07@orbisindustrial.example>",
+  "from": "invoices@orbisindustrial.example",
+  "to": "ap-inbox@giantleap-lab.example",
+  "subject": "Invoice INV-07940 - Orbis Industrial Services",
+  "received_at": "2026-08-29T09:14:00+10:00",
+  "body_text": "Please find attached invoice INV-07940 for recent supply.\n\nRegards\nAccounts, Orbis Industrial Services",
+  "attachments": [
+    {
+      "filename": "INV-07940.pdf",
+      "document_ref": "CASE-07_INV-07940",
+      "content_type": "application/pdf",
+      "note": "The stored document. Call extract_invoice(document_ref) to read it \u2014 do not open it directly."
+    }
+  ],
+  "auth_results": {
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass"
+  }
+}

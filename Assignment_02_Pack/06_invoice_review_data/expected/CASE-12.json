@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-12",
+  "invoice_number": "INV-12159",
+  "po_number": "PO-2026-4012",
+  "supplier_id": "SUP-1002",
+  "what_this_case_forces": "PO priced per case of 12; invoice priced per unit. Totals look wildly wrong until units are noticed",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

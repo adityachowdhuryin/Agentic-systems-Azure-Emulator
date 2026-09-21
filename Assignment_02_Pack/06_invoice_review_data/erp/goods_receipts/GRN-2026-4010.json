@@ -1,0 +1,38 @@
+{
+  "grn_number": "GRN-2026-4010",
+  "po_number": "PO-2026-4010",
+  "supplier_id": "SUP-1002",
+  "received_on": "2026-08-02",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "PLT-AL-3",
+      "quantity_received": 50
+    },
+    {
+      "line_no": 2,
+      "item_code": "PLT-AL-5",
+      "quantity_received": 40
+    },
+    {
+      "line_no": 3,
+      "item_code": "ROD-SS-10",
+      "quantity_received": 120
+    },
+    {
+      "line_no": 4,
+      "item_code": "TUBE-CU-15",
+      "quantity_received": 200
+    },
+    {
+      "line_no": 5,
+      "item_code": "SEAL-VT-25",
+      "quantity_received": 240
+    },
+    {
+      "line_no": 6,
+      "item_code": "SPRG-C-08",
+      "quantity_received": 500
+    }
+  ]
+}

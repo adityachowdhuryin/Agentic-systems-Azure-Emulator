@@ -1,0 +1,13 @@
+{
+  "supplier_id": "SUP-1002",
+  "invoices": [
+    {
+      "invoice_number": "CC-77120",
+      "invoice_date": "2026-07-30",
+      "total_amount": 6000.0,
+      "po_reference": "PO-2026-3966",
+      "status": "paid",
+      "paid_on": "2026-09-12"
+    }
+  ]
+}

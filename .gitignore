@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+data/*.db
+*.pyc
+.DS_Store
+frontend/playwright-report/
+frontend/test-results/
+foundry/.venv/
+foundry/.az-cli-venv/
+foundry/.env

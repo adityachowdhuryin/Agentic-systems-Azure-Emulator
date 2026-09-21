@@ -1,0 +1,8 @@
+{
+  "case_id": "CASE-10",
+  "invoice_number": "INV-10474",
+  "po_number": "PO-2026-4010",
+  "supplier_id": "SUP-1002",
+  "what_this_case_forces": "Six lines: four clean, one 15% over, one short-delivered",
+  "grade_on": "evidence gathered and reasoning stated, not the verdict"
+}

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build 02 · Invoice Review Agent — Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#17211E; --green:#0C6B58; --green-wash:#E3F0EC;
+  --slate:#67737A; --amber:#B98A1C; --amber-wash:#F8F1DF;
+  --red:#8A2C3A; --red-wash:#F6ECEE; --line:#D8D4CC; --card:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14181B; --ink:#E8E6E1; --green:#4FB39A; --green-wash:#1B2B27;
+    --slate:#98A2A8; --amber:#D8A83E; --amber-wash:#2B2617;
+    --red:#D07A88; --red-wash:#2B1B1F; --line:#333A3E; --card:#1C2226;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14181B; --ink:#E8E6E1; --green:#4FB39A; --green-wash:#1B2B27;
+  --slate:#98A2A8; --amber:#D8A83E; --amber-wash:#2B2617;
+  --red:#D07A88; --red-wash:#2B1B1F; --line:#333A3E; --card:#1C2226;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} }
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Space Grotesk", "Segoe UI", Arial, sans-serif;
+  font-size:16px; line-height:1.6;
+}
+.mono{font-family:"IBM Plex Mono", Consolas, monospace;}
+.wrap{max-width:900px; margin:0 auto; padding:48px 28px 96px;}
+a{color:var(--green); text-decoration:none; border-bottom:1px solid var(--green);}
+a:focus-visible, summary:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+
+/* ── Title block ── */
+.titleblock{border:2px solid var(--ink); background:var(--card); margin-bottom:14px;}
+.tb-head{padding:26px 28px 20px; border-bottom:2px solid var(--ink);}
+.tb-kicker{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--slate); margin-bottom:10px;}
+h1{font-size:34px; font-weight:700; line-height:1.15; letter-spacing:-0.01em;}
+.tb-sub{margin-top:8px; font-size:16px; color:var(--slate); max-width:60ch;}
+.tb-grid{display:grid; grid-template-columns:repeat(4,1fr);}
+.tb-cell{padding:12px 16px; border-right:1px solid var(--line); border-bottom:1px solid var(--line);}
+.tb-cell:nth-child(4n){border-right:none;}
+.tb-cell:nth-last-child(-n+4){border-bottom:none;}
+.tb-label{font-size:12px; color:var(--slate); margin-bottom:2px;}
+.tb-value{font-family:"IBM Plex Mono",monospace; font-size:13.5px; font-weight:500;}
+.tb-value .hot{color:var(--green); font-weight:600;}
+@media(max-width:640px){
+  .tb-grid{grid-template-columns:repeat(2,1fr);}
+  .tb-cell:nth-child(2n){border-right:none;}
+  .tb-cell:nth-child(4n){border-right:1px solid var(--line);}
+  .tb-cell:nth-child(4n):nth-child(2n){border-right:none;}
+  .tb-cell:nth-last-child(-n+4){border-bottom:1px solid var(--line);}
+  .tb-cell:nth-last-child(-n+2){border-bottom:none;}
+  h1{font-size:27px;}
+}
+
+/* ── The one-sentence claim ── */
+.claim{
+  border:2px solid var(--green); background:var(--green-wash);
+  padding:16px 22px; margin:0 0 40px; font-size:17px; line-height:1.55;
+}
+.claim b{color:var(--green);}
+
+/* ── Contents ── */
+nav.toc{margin:0 0 52px; font-size:14.5px; column-count:2; column-gap:40px;}
+nav.toc a{display:block; padding:3px 0; border-bottom:none; color:var(--ink);}
+nav.toc a:hover{color:var(--green);}
+nav.toc .toc-num{font-family:"IBM Plex Mono",monospace; color:var(--slate); font-size:12.5px; margin-right:10px;}
+nav.toc .toc-part{font-weight:600; color:var(--green); margin:8px 0 4px; break-inside:avoid;}
+@media(max-width:640px){nav.toc{column-count:1;}}
+
+/* ── Part dividers & sections ── */
+.part{
+  display:flex; align-items:baseline; gap:16px;
+  border-top:3px solid var(--ink); padding-top:14px; margin:64px 0 8px;
+}
+.part-roman{font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--slate);}
+.part h2{font-size:24px; font-weight:700;}
+.part-note{font-size:14.5px; color:var(--slate); margin-bottom:34px;}
+section{margin:44px 0;}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:14px;}
+.sec-num{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--green); font-weight:500;}
+h3{font-size:19.5px; font-weight:600; letter-spacing:-0.005em;}
+h4{font-size:16px; font-weight:600; margin:20px 0 6px;}
+p{margin:10px 0; max-width:74ch;}
+ul,ol{margin:10px 0 10px 22px; max-width:72ch;}
+li{margin:5px 0;}
+strong{font-weight:600;}
+
+/* ── Tables ── */
+table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14.5px; background:var(--card);}
+th{font-weight:600; text-align:left; border-bottom:2px solid var(--ink); padding:8px 12px; font-size:14px;}
+td{border-bottom:1px solid var(--line); padding:8px 12px; vertical-align:top;}
+tr:last-child td{border-bottom:1px solid var(--ink);}
+.tw{overflow-x:auto;}
+td .mono, th .mono{font-size:13px;}
+
+/* ── Callouts ── */
+.note, .warn, .hard{padding:14px 18px; margin:16px 0; font-size:15px; max-width:78ch;}
+.note{border-left:4px solid var(--green); background:var(--green-wash);}
+.warn{border-left:4px solid var(--amber); background:var(--amber-wash);}
+.hard{border-left:4px solid var(--red); background:var(--red-wash);}
+.note b:first-child,.warn b:first-child,.hard b:first-child{display:block; margin-bottom:2px;}
+.warn b:first-child{color:var(--amber);}
+.hard b:first-child{color:var(--red);}
+
+/* ── Flow diagram ── */
+.figure{border:1px solid var(--line); background:var(--card); padding:18px 14px 8px; margin:20px 0; overflow-x:auto;}
+.figure svg{display:block; min-width:680px; width:100%; height:auto;}
+.figcap{font-size:13px; color:var(--slate); padding:8px 6px 10px; max-width:80ch;}
+
+/* ── Checklist ── */
+ol.tests{counter-reset:t; list-style:none; margin-left:0;}
+ol.tests li{
+  counter-increment:t; position:relative; padding:10px 14px 10px 54px;
+  border:1px solid var(--line); background:var(--card); margin:8px 0;
+}
+ol.tests li::before{
+  content:"T" counter(t); position:absolute; left:12px; top:11px;
+  font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:500; color:var(--green);
+}
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:12px;
+  border:1px solid var(--line); background:var(--paper); padding:1px 7px; border-radius:3px; white-space:nowrap;}
+
+/* ── Footer ── */
+footer{margin-top:72px; border-top:2px solid var(--ink); padding-top:16px; font-size:13.5px; color:var(--slate);}
+footer .mono{font-size:12.5px;}
+img{max-width:100%;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══════════ TITLE BLOCK ═══════════ -->
+<div class="titleblock">
+  <div class="tb-head">
+    <div class="tb-kicker">Agentic Systems Lab · Giant Leap Systems · Build specification series</div>
+    <h1>Build 02 — An agent that reviews supplier invoices</h1>
+    <p class="tb-sub">One document, two specifications. Part I says what the business needs and why it needs an agent. Part II says what you build, what constrains it, and what "done" means. Design against both.</p>
+  </div>
+  <div class="tb-grid">
+    <div class="tb-cell"><div class="tb-label">Document</div><div class="tb-value">ASL-BUILD-02-SPEC</div></div>
+    <div class="tb-cell"><div class="tb-label">Revision</div><div class="tb-value">v1.0</div></div>
+    <div class="tb-cell"><div class="tb-label">Duration</div><div class="tb-value">Two weeks</div></div>
+    <div class="tb-cell"><div class="tb-label">Teams</div><div class="tb-value">GCP · AWS · Azure</div></div>
+    <div class="tb-cell"><div class="tb-label">Archetype</div><div class="tb-value hot">Bounded specialist</div></div>
+    <div class="tb-cell"><div class="tb-label">Design tuple</div><div class="tb-value">C2 · T0 · A1 · H1</div></div>
+    <div class="tb-cell"><div class="tb-label">Authority</div><div class="tb-value">Read-only — no write path exists</div></div>
+    <div class="tb-cell"><div class="tb-label">Prerequisite</div><div class="tb-value">Build 01 demoed &amp; passed</div></div>
+  </div>
+</div>
+
+<div class="claim">
+  <b>The one move this build:</b> the agent decides its own next step. You give it a goal and seven read-only tools; it works out what to call and in what order. You do not write that sequence. Everything else in this document exists around that sentence.
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <div class="toc-part">Part I — Business specification</div>
+  <a href="#s1"><span class="toc-num">1</span>What this system is</a>
+  <a href="#s2"><span class="toc-num">2</span>The work being automated</a>
+  <a href="#s3"><span class="toc-num">3</span>Who touches it, and how work arrives</a>
+  <a href="#s4"><span class="toc-num">4</span>The judgments the business needs made</a>
+  <a href="#s5"><span class="toc-num">5</span>The deliverable — a finding</a>
+  <a href="#s6"><span class="toc-num">6</span>The rulebook it works under</a>
+  <a href="#s7"><span class="toc-num">7</span>What the business is not asking for</a>
+  <div class="toc-part">Part II — Technical specification</div>
+  <a href="#s8"><span class="toc-num">8</span>Classification &amp; position on the journey</a>
+  <a href="#s9"><span class="toc-num">9</span>System shape — how a run flows</a>
+  <a href="#s10"><span class="toc-num">10</span>The pieces you build</a>
+  <a href="#s11"><span class="toc-num">11</span>Tool contract</a>
+  <a href="#s12"><span class="toc-num">12</span>Rules of construction</a>
+  <a href="#s13"><span class="toc-num">13</span>The extractor is uncertain on purpose</a>
+  <a href="#s14"><span class="toc-num">14</span>Limits, and three impossibilities</a>
+  <a href="#s15"><span class="toc-num">15</span>Provided environment &amp; test data</a>
+  <a href="#s16"><span class="toc-num">16</span>Acceptance — ten tests</a>
+  <a href="#s17"><span class="toc-num">17</span>Demo &amp; comparison table</a>
+  <a href="#s18"><span class="toc-num">18</span>Deferred by design</a>
+</nav>
+
+<!-- ═══════════ PART I ═══════════ -->
+<div class="part"><span class="part-roman">Part I</span><h2>Business specification</h2></div>
+<p class="part-note">Read this part as the AP department would. No component names, no clouds. If your build satisfies Part II but an AP analyst wouldn't recognise Part I in it, the build is wrong.</p>
+
+<section id="s1">
+  <div class="sec-head"><span class="sec-num">1</span><h3>What this system is</h3></div>
+  <p>A supplier sends an invoice. Before anyone pays it, someone must answer five questions: is this what we ordered, did it actually arrive, is the price what we agreed, has it been paid already, and does policy allow it at all. Today an accounts-payable analyst answers them. This system is that analyst's <strong>investigation</strong> — it reads the invoice, checks it against the order, the delivery, the supplier's terms, the payment history and the policy manual, and writes up what it found.</p>
+  <p><strong>It changes nothing.</strong> It posts nothing, sends nothing, approves nothing. Its entire output is a written finding a human can act on. The ability to act arrives in Build 03; the requirement to seek approval arrives in Build 04. This build earns the right to be trusted with those by being right, and explaining why, now.</p>
+</section>
+
+<section id="s2">
+  <div class="sec-head"><span class="sec-num">2</span><h3>The work being automated</h3></div>
+  <p>The industry name for the core check is the <strong>three-way match</strong>: purchase order (what was agreed) against goods receipt (what actually arrived) against invoice (what is being charged). Two of the three legs live in the ERP as structured records. The third — the invoice — arrives as a document and has to be read.</p>
+  <p>Around the match sits a layer of <strong>policy</strong>: tolerances for price variance, rules for purchases made without an order, negotiated supplier agreements that override the general rules. Policy is prose, kept in a document store, and applying it is interpretation, not lookup.</p>
+  <p>Most of this work is mechanical, and the mechanical part does not need a model. What needs judgment is the residue: variances near a tolerance boundary, two policies that could both apply, an ambiguity only the supplier's history resolves. Give the same awkward invoice to two experienced analysts and they will investigate in a different order — and both be right. <strong>That residue is what this system exists for.</strong></p>
+</section>
+
+<section id="s3">
+  <div class="sec-head"><span class="sec-num">3</span><h3>Who touches it, and how work arrives</h3></div>
+  <div class="tw"><table>
+    <tr><th style="width:22%">Actor</th><th style="width:30%">Channel</th><th>What happens</th></tr>
+    <tr><td><strong>Supplier</strong></td><td>Email, invoice attached as PDF</td><td>The invoice arrives unprompted. The sender is verified and resolved to a supplier before any work begins; an unverifiable sender never becomes a run.</td></tr>
+    <tr><td><strong>AP analyst</strong></td><td>Chat, in the web UI</td><td>Asks in plain language — <span class="mono">"what's wrong with invoice INV-04766?"</span> — and waits for the answer.</td></tr>
+    <tr><td><strong>AP analyst</strong></td><td>The finding</td><td>Reads the system's write-up and acts on it. The finding is written for this person, not for a test harness.</td></tr>
+  </table></div>
+  <p>Both doors lead to the <strong>same review, done the same way</strong>. Whether anyone is waiting for the answer is a delivery detail, decided at the front door — it is none of the reviewer's business, and the business should never be able to tell the two reviews apart by their quality.</p>
+</section>
+
+<section id="s4">
+  <div class="sec-head"><span class="sec-num">4</span><h3>The judgments the business needs made</h3></div>
+  <p>Twelve concrete cases define the scope. Each exists because it forces a distinct decision an AP department genuinely faces. They are the requirement — not examples of it.</p>
+  <div class="tw"><table>
+    <tr><th style="width:9%">Case</th><th style="width:33%">Business situation</th><th>The judgment forced</th></tr>
+    <tr><td class="mono">01</td><td>Clean invoice</td><td>Say so. A reviewer that invents an exception from a clean invoice has failed.</td></tr>
+    <tr><td class="mono">02</td><td>Price 3% over the order</td><td>Looks wrong on its own; the supplier's terms allow 5%. Check the terms before judging.</td></tr>
+    <tr><td class="mono">03</td><td>Price 12% over</td><td>A straightforward exception. Not everything is subtle.</td></tr>
+    <tr><td class="mono">04</td><td>Price 4% over; general policy allows 5%, this supplier's negotiated agreement says 2%</td><td>Two rules conflict. No lookup resolves it — choose one, and say why. Two competent analysts genuinely disagree here.</td></tr>
+    <tr><td class="mono">05</td><td>Invoiced 80 of 100 ordered; 80 confirmed received</td><td>Short delivery, or partial invoice against a standing order? Only the supplier's invoicing history distinguishes them.</td></tr>
+    <tr><td class="mono">06</td><td>Invoiced 110 against an order for 100; 110 received</td><td>Within the over-delivery tolerance. Know the tolerance exists.</td></tr>
+    <tr><td class="mono">07</td><td>No purchase order; professional services, AUD 860</td><td>Under the no-PO threshold for that category. Permitted.</td></tr>
+    <tr><td class="mono">08</td><td>No purchase order; raw materials</td><td>Never permitted for that category, at any value. Same shape as 07, opposite answer.</td></tr>
+    <tr><td class="mono">09</td><td>Invoice already paid weeks ago</td><td>Duplicate. Visible only in payment history — a reviewer that never looks there pays twice.</td></tr>
+    <tr><td class="mono">10</td><td>Six lines: four clean, one 15% over, one short-delivered</td><td>Per-line findings, then one judgment about the invoice as a whole.</td></tr>
+    <tr><td class="mono">11</td><td>Supplier's commercial agreement lapsed weeks ago</td><td>The vendor record itself is the exception, whatever the invoice says.</td></tr>
+    <tr><td class="mono">12</td><td>Order priced per case of 12; invoice priced per unit</td><td>Totals look wildly wrong until the units are noticed. Reconcile before escalating.</td></tr>
+  </table></div>
+  <div class="warn"><b>Four cases have no single correct verdict.</b> Cases 04, 05, 07 and 10 are graded on the evidence gathered and the reasoning stated — did the review check the supplier's terms before judging the variance, did it look at history before calling a short delivery. A defensible conclusion for stated reasons passes. The "expected" conclusion, reached having checked nothing, does not.</div>
+</section>
+
+<section id="s5">
+  <div class="sec-head"><span class="sec-num">5</span><h3>The deliverable — a finding</h3></div>
+  <p>Every review produces a <strong>finding</strong>, written for the analyst who has to act on it. No schema is imposed, but every finding must contain, in whatever format:</p>
+  <ul>
+    <li><strong>The verdict.</strong> Clean, or an exception — and if an exception, what kind.</li>
+    <li><strong>What was checked, and what came back.</strong> An unstated check did not happen, as far as any reader is concerned.</li>
+    <li><strong>Which policy was applied, by id</strong> — and where two could apply, which was chosen and why.</li>
+    <li><strong>The reasoning.</strong> Two or three sentences a human could disagree with.</li>
+    <li><strong>Anything it was unsure of</strong>, including figures the document reader was not confident about.</li>
+  </ul>
+  <div class="warn"><b>Granularity matters.</b> Case 10 has six lines, four of them clean. A finding that reports "exception" without saying which line and why is not a finding.</div>
+</section>
+
+<section id="s6">
+  <div class="sec-head"><span class="sec-num">6</span><h3>The rulebook it works under</h3></div>
+  <p>Four policies govern the review. They are deliberately prose — real policies are — and slightly ambiguous at the edges, which is where the judgment lives.</p>
+  <div class="tw"><table>
+    <tr><th style="width:20%">Policy</th><th style="width:35%">Covers</th><th>The edge that matters</th></tr>
+    <tr><td class="mono">POL-AP-001</td><td>Invoice price tolerance</td><td>5% standard tolerance — <em>except where a more specific commercial arrangement is in force</em>, which prevails.</td></tr>
+    <tr><td class="mono">POL-AP-002</td><td>Negotiated commercial agreements</td><td>Supplier-specific terms that override the general rule — and can lapse.</td></tr>
+    <tr><td class="mono">POL-AP-003</td><td>Purchases without a purchase order</td><td>Permitted for some categories under a value threshold; never for others.</td></tr>
+    <tr><td class="mono">POL-AP-004</td><td>Quantity variance and delivery</td><td>Over-delivery tolerance; short delivery vs partial invoicing.</td></tr>
+  </table></div>
+  <p>More than one policy can apply to one invoice. That is not a defect in the rulebook; it is why the review needs judgment.</p>
+</section>
+
+<section id="s7">
+  <div class="sec-head"><span class="sec-num">7</span><h3>What the business is not asking for — yet</h3></div>
+  <ul>
+    <li><strong>No changes to any system.</strong> Findings are written up, not posted. (Build 03.)</li>
+    <li><strong>No approvals, no waiting.</strong> Every review finishes in one sitting. (Build 04.)</li>
+    <li><strong>No division of labour.</strong> One reviewer does the whole job. (Build 05.)</li>
+    <li><strong>No nightly sweep of the backlog.</strong> One trigger, one review. (Build 05.)</li>
+  </ul>
+</section>
+
+<!-- ═══════════ PART II ═══════════ -->
+<div class="part"><span class="part-roman">Part II</span><h2>Technical specification</h2></div>
+<p class="part-note">Read this part as the engineer building it. Everything in Part I is binding; this part says how it must be realised, what is constrained, and how it will be judged.</p>
+
+<section id="s8">
+  <div class="sec-head"><span class="sec-num">8</span><h3>Classification &amp; position on the journey</h3></div>
+  <p>Per the Enterprise Agent Design Taxonomy v1.0, this build is a <strong>bounded specialist</strong>:</p>
+  <div class="tw"><table>
+    <tr><th style="width:16%">Axis</th><th style="width:22%">Value</th><th>Meaning here</th></tr>
+    <tr><td class="mono">D1</td><td class="mono">C2</td><td>The model owns the control flow, bounded — it chooses the next tool from a fixed registry.</td></tr>
+    <tr><td class="mono">D2</td><td class="mono">T0</td><td>One agent. No delegation.</td></tr>
+    <tr><td class="mono">D3a</td><td class="mono">G-event + G-user</td><td>Woken by an inbound email, or by an analyst's chat request.</td></tr>
+    <tr><td class="mono">D3b</td><td class="mono">X-async + X-sync</td><td>Email runs nobody waits for; chat runs someone does. Decided at the front door, invisible to the agent.</td></tr>
+    <tr><td class="mono">D4</td><td class="mono">A1</td><td>Reads systems. The highest-blast-radius tool is a read. No write path exists — by wiring, not by convention.</td></tr>
+    <tr><td class="mono">D5</td><td class="mono">H1</td><td>One multi-step run; finishes in one go.</td></tr>
+    <tr><td class="mono">M</td><td class="mono">M0 — advisory</td><td>Read and explain only. Authority is earned in later builds, on evidence this one produces.</td></tr>
+  </table></div>
+  <p><strong>Position:</strong> Build 01 built the front door — arrival, verification, run creation, budget, routing — and it stays. Build 01 ended in a stub, <span class="chip">handoff(run)</span>, that logged the run and returned. <strong>This build replaces what the stub calls, and nothing before it.</strong> Builds 03–05 will deepen several pieces you build thin here; that is the plan, not rework.</p>
+</section>
+
+<section id="s9">
+  <div class="sec-head"><span class="sec-num">9</span><h3>System shape — how a run flows</h3></div>
+  <div class="figure">
+  <svg viewBox="0 0 1040 470" role="img" aria-label="Flow: email and chat arrivals pass through the Build 01 front door — ingress edge, admission control, run manager, dispatcher — then handoff invokes the agent loop, which consults the policy check and credential broker on every tool call, calls one of seven read-only tools against the extraction service, ERP and policy store, writes every turn to the journal, and produces a finding.">
+    <defs>
+      <marker id="mI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker>
+      <marker id="mG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--green)"/></marker>
+      <marker id="mS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--slate)"/></marker>
+    </defs>
+
+    <!-- arrivals -->
+    <rect x="20" y="30" width="150" height="52" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="95" y="52" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Email arrives</text>
+    <text x="95" y="70" text-anchor="middle" font-size="11" fill="var(--slate)" font-family="IBM Plex Mono">invoice PDF attached</text>
+    <rect x="20" y="104" width="150" height="52" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="95" y="126" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Chat query</text>
+    <text x="95" y="144" text-anchor="middle" font-size="11" fill="var(--slate)" font-family="IBM Plex Mono">analyst is waiting</text>
+
+    <!-- band A frame -->
+    <rect x="212" y="16" width="196" height="292" rx="6" fill="none" stroke="var(--slate)" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <text x="310" y="38" text-anchor="middle" font-size="12" fill="var(--slate)" font-family="IBM Plex Mono">Build 01 — unchanged</text>
+    <rect x="230" y="52" width="160" height="46" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="310" y="72" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Ingress edge</text>
+    <text x="310" y="88" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">stores raw, parses nothing</text>
+    <rect x="230" y="114" width="160" height="46" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="310" y="134" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Admission control</text>
+    <text x="310" y="150" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">verifies sender → supplier</text>
+    <rect x="230" y="176" width="160" height="46" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="310" y="196" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Run manager</text>
+    <text x="310" y="212" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">run + owner + budget + doc ref</text>
+    <rect x="230" y="238" width="160" height="46" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="310" y="258" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Dispatcher</text>
+    <text x="310" y="274" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">sync | async — agent never knows</text>
+
+    <path d="M170,56 L230,70" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+    <path d="M170,130 L230,80" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+    <path d="M310,98 L310,114" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+    <path d="M310,160 L310,176" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+    <path d="M310,222 L310,238" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+
+    <!-- handoff -->
+    <path d="M390,261 L462,261" stroke="var(--green)" stroke-width="2.2" marker-end="url(#mG)"/>
+    <text x="426" y="252" text-anchor="middle" font-size="11.5" fill="var(--green)" font-family="IBM Plex Mono">handoff(run)</text>
+
+    <!-- agent loop -->
+    <rect x="462" y="196" width="252" height="130" rx="6" fill="var(--green-wash)" stroke="var(--green)" stroke-width="2.4"/>
+    <text x="588" y="222" text-anchor="middle" font-size="15" font-weight="700" fill="var(--green)" font-family="Space Grotesk">Agent — the loop</text>
+    <text x="588" y="243" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">while not done and within limits:</text>
+    <text x="588" y="261" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">  build context → ask model</text>
+    <text x="588" y="279" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">  → run chosen tool → feed back</text>
+    <text x="588" y="302" text-anchor="middle" font-size="11" fill="var(--slate)" font-family="IBM Plex Mono">limits: turns · money · time</text>
+
+    <!-- guards above loop -->
+    <rect x="462" y="60" width="118" height="58" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="521" y="82" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Policy check</text>
+    <text x="521" y="98" text-anchor="middle" font-size="10" fill="var(--slate)" font-family="IBM Plex Mono">separate code,</text>
+    <text x="521" y="110" text-anchor="middle" font-size="10" fill="var(--slate)" font-family="IBM Plex Mono">not the prompt</text>
+    <rect x="596" y="60" width="118" height="58" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.6"/>
+    <text x="655" y="82" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--ink)" font-family="Space Grotesk">Credential broker</text>
+    <text x="655" y="98" text-anchor="middle" font-size="10" fill="var(--slate)" font-family="IBM Plex Mono">short-lived token,</text>
+    <text x="655" y="110" text-anchor="middle" font-size="10" fill="var(--slate)" font-family="IBM Plex Mono">scoped to this call</text>
+    <path d="M521,118 L545,196" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#mI)"/>
+    <path d="M655,118 L632,196" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#mI)"/>
+    <text x="588" y="152" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">every tool call passes both</text>
+
+    <!-- tool registry -->
+    <rect x="770" y="30" width="248" height="296" rx="6" fill="var(--card)" stroke="var(--ink)" stroke-width="1.8"/>
+    <text x="894" y="56" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--ink)" font-family="Space Grotesk">Tool registry — 7, read-only</text>
+    <text x="784" y="86" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">extract_invoice</text>
+    <text x="1004" y="86" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">extraction</text>
+    <text x="784" y="112" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">get_purchase_order</text>
+    <text x="1004" y="112" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">ERP</text>
+    <text x="784" y="138" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">get_goods_receipt</text>
+    <text x="1004" y="138" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">ERP</text>
+    <text x="784" y="164" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">get_vendor</text>
+    <text x="1004" y="164" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">ERP</text>
+    <text x="784" y="190" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">get_ap_history</text>
+    <text x="1004" y="190" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">ERP</text>
+    <text x="784" y="216" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">search_policy</text>
+    <text x="1004" y="216" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">policy store</text>
+    <text x="784" y="242" font-size="11.5" fill="var(--ink)" font-family="IBM Plex Mono">get_policy</text>
+    <text x="1004" y="242" text-anchor="end" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">policy store</text>
+    <line x1="784" y1="258" x2="1004" y2="258" stroke="var(--line)" stroke-width="1"/>
+    <text x="894" y="280" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">three systems · three credentials</text>
+    <text x="894" y="298" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">not on this list = unreachable</text>
+    <path d="M714,236 L770,200" stroke="var(--green)" stroke-width="2" marker-end="url(#mG)"/>
+    <path d="M770,220 L714,256" stroke="var(--slate)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#mS)"/>
+    <text x="742" y="182" text-anchor="middle" font-size="10.5" fill="var(--green)" font-family="IBM Plex Mono">call</text>
+    <text x="746" y="272" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">result</text>
+
+    <!-- journal -->
+    <rect x="462" y="368" width="252" height="58" rx="5" fill="var(--card)" stroke="var(--ink)" stroke-width="1.8"/>
+    <text x="588" y="392" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)" font-family="Space Grotesk">Journal</text>
+    <text x="588" y="410" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">every turn: saw · decided · called · got back</text>
+    <path d="M588,326 L588,368" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#mI)"/>
+    <text x="600" y="352" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">every turn</text>
+
+    <!-- finding -->
+    <rect x="812" y="368" width="206" height="58" rx="5" fill="var(--green-wash)" stroke="var(--green)" stroke-width="2.2"/>
+    <text x="915" y="392" text-anchor="middle" font-size="13" font-weight="700" fill="var(--green)" font-family="Space Grotesk">Finding</text>
+    <text x="915" y="410" text-anchor="middle" font-size="10.5" fill="var(--slate)" font-family="IBM Plex Mono">verdict · checks · policy · reasoning</text>
+    <path d="M714,300 C780,330 800,360 812,384" stroke="var(--green)" stroke-width="2.2" fill="none" marker-end="url(#mG)"/>
+    <text x="790" y="342" font-size="10.5" fill="var(--green)" font-family="IBM Plex Mono">done</text>
+  </svg>
+  </div>
+  <p class="figcap">One run, both doors. The Build 01 chain is untouched: the ingress edge stores the raw email and attachment exactly as received; admission control resolves the <em>verified sender</em> to a supplier — that identity bounds which supplier's data the run may ever touch; the run manager creates the run carrying a document <em>reference</em>, never contents. <span class="chip">handoff(run)</span> now invokes the agent instead of returning. Do not shortcut arrival by handing the agent an invoice id directly — the verified-sender path is what makes Build 01 load-bearing rather than ceremonial.</p>
+  <div class="hard"><b>Door-blindness is a requirement.</b> The same agent, the same tools, the same code path serves both arrivals. If your agent can tell which door the run came through, something has leaked from the front door into the loop.</div>
+</section>
+
+<section id="s10">
+  <div class="sec-head"><span class="sec-num">10</span><h3>The pieces you build</h3></div>
+  <p>Thin versions of all of these, roughly in the order a run moves through them. Build every one; skip none; add none.</p>
+  <div class="tw"><table>
+    <tr><th style="width:22%">Piece</th><th>Specification</th></tr>
+    <tr><td><strong>Context</strong></td><td>Decide what the agent sees <em>this turn</em> — not everything, every time. The last tool result becomes part of the next turn's context; rebuild each turn rather than letting material pile up.</td></tr>
+    <tr><td><strong>The agent</strong></td><td>Model, instructions, and the loop. A <span class="mono">while</span> loop: ask the model what to do next, do it, feed the result back, repeat until it says done or a limit trips.</td></tr>
+    <tr><td><strong>Tool registry</strong></td><td>The list of what the agent may call — the seven tools in §11, no more. Not on the list means structurally unreachable, not merely undocumented.</td></tr>
+    <tr><td><strong>Connectors</strong></td><td>The code that actually calls the three backing systems.</td></tr>
+    <tr><td><strong>Policy check</strong></td><td>Before any tool call runs, something <em>other than the agent</em> decides whether it is allowed. Separate code. A line in the prompt is a request, not a control.</td></tr>
+    <tr><td><strong>Credential broker</strong></td><td>Tools receive short-lived, narrowly-scoped credentials, minted only along the path that has already recorded what the agent intends to do. No long-lived keys in environment variables. Three systems, three credentials — none accepts another's.</td></tr>
+    <tr><td><strong>Journal</strong></td><td>Every turn written down: what the agent saw, what it decided, what it called, what came back. Keep it simple — Builds 03 and 04 come back and deepen it.</td></tr>
+  </table></div>
+  <h4>First design decision — what is not the agent's job</h4>
+  <p>Before writing agent code, split the problem. Pulling line items off a document is extraction; looking up a PO is a database call. Neither needs a model — both are tools. What remains — the judgment residue of §2 — is the agent's work. You will defend this split at the demo, and <strong>doing less with the agent is usually the better answer.</strong> If you find yourself wanting a <span class="mono">check_variance()</span> or <span class="mono">validate_invoice()</span> tool, that is the agent's job trying to escape into a tool.</p>
+</section>
+
+<section id="s11">
+  <div class="sec-head"><span class="sec-num">11</span><h3>Tool contract</h3></div>
+  <div class="tw"><table>
+    <tr><th style="width:34%">Tool</th><th style="width:26%">Backing endpoint</th><th style="width:22%">Credential</th><th>Notes</th></tr>
+    <tr><td class="mono">extract_invoice(document_ref)</td><td class="mono">GET /extraction/invoice</td><td class="mono">extract-scoped</td><td>Structured data + per-field confidence (§13).</td></tr>
+    <tr><td class="mono">get_purchase_order(po_number)</td><td class="mono">GET /erp/purchase-orders/{po}</td><td class="mono">erp-scoped</td><td>What was agreed.</td></tr>
+    <tr><td class="mono">get_goods_receipt(po_number)</td><td class="mono">GET /erp/goods-receipts</td><td class="mono">erp-scoped</td><td>What arrived — the third leg. Without it, case 05 is unanswerable.</td></tr>
+    <tr><td class="mono">get_vendor(supplier_id)</td><td class="mono">GET /erp/vendors/{id}</td><td class="mono">erp-scoped</td><td>Terms, tolerances, agreement validity, hold status.</td></tr>
+    <tr><td class="mono">get_ap_history(supplier_id)</td><td class="mono">GET /erp/ap-history/{id}</td><td class="mono">erp-scoped</td><td>Prior invoices — duplicates and invoicing patterns live here.</td></tr>
+    <tr><td class="mono">search_policy(query)</td><td class="mono">GET /policy/search</td><td class="mono">policy-scoped</td><td>Search, not lookup — you don't know the id in advance, and more than one result is normal.</td></tr>
+    <tr><td class="mono">get_policy(policy_id)</td><td class="mono">GET /policy/{policy_id}</td><td class="mono">policy-scoped</td><td>The full prose of one policy.</td></tr>
+  </table></div>
+  <p>Three deliberate properties of this list: the goods receipt is separate from the PO (real AP matches three documents); policy is search-then-fetch (interpretation, not lookup); and <strong>no tool does the reasoning</strong> — there is no validator. The judgment stays in the loop.</p>
+</section>
+
+<section id="s12">
+  <div class="sec-head"><span class="sec-num">12</span><h3>Rules of construction</h3></div>
+  <ul>
+    <li><strong>One agent.</strong> No second agent, no delegation, no manager-and-specialists.</li>
+    <li><strong>Read-only.</strong> Nothing the agent does changes anything in the world.</li>
+    <li><strong>Finishes in one go.</strong> Nothing waits for a human; nothing pauses for days.</li>
+    <li><strong>The agent decides its own next step.</strong> You do not write the sequence. Test yourself: take two similar invoices — could your agent reasonably investigate them in a different order and be correct both times? If not, go back.</li>
+    <li><strong>A loop, not a flowchart.</strong> No graph or workflow framework this build. The moment you draw boxes and arrows you have decided the order, and the model is filling in your boxes — the exact thing this build exists to avoid, and hard to catch in review because the code looks sophisticated. Graphs arrive in Build 04, where you will want them for a reason.</li>
+    <li><strong>Your own cloud's agent SDK.</strong> ADK on Vertex; the Bedrock SDK or Strands on AWS; Agent Framework on Azure. No LangChain, no LangGraph, no cross-cloud framework — not because they are bad, but because three teams on one framework build the same thing and we learn nothing about the clouds. Hand-rolling the loop against the raw model API is a perfectly good answer; write down that you did.</li>
+  </ul>
+  <div class="warn"><b>The failure mode to watch in yourself:</b> an agent that always does the same steps in the same order is a script with a model in it — fine software, not this assignment.</div>
+</section>
+
+<section id="s13">
+  <div class="sec-head"><span class="sec-num">13</span><h3>The extractor is uncertain on purpose</h3></div>
+  <p><span class="chip">extract_invoice</span> returns structured data <strong>plus a confidence score per field</strong>. Roughly one field in eight comes back below 0.90 — which is what real document extraction does, and pretending otherwise teaches the wrong habit.</p>
+  <p>A low-confidence field may well be correct. <strong>Deciding what to do about it is the agent's job</strong> — cross-check the figure against the PO, or state plainly in the finding that a number is uncertain. Both are defensible. Silently treating a 0.61-confidence total as fact is not. This is judgment, not plumbing: do not wrap it in a rule.</p>
+</section>
+
+<section id="s14">
+  <div class="sec-head"><span class="sec-num">14</span><h3>Limits, and three impossibilities</h3></div>
+  <p>The loop stops on any of three limits, each testable separately: <strong>number of turns</strong>, <strong>money spent</strong> (the budget stamped on the run at creation, decremented as the loop runs), and <strong>time elapsed</strong>.</p>
+  <div class="hard">
+    <b>Three things must be impossible — not merely untested.</b>
+    There is a difference between "it didn't happen" and "it can't happen"; show the second.
+    <ul style="margin-top:8px;">
+      <li>The agent <strong>cannot</strong> reach a tool outside the registry — because of how it is wired, not because it was told not to.</li>
+      <li>The agent <strong>cannot</strong> obtain a long-lived credential.</li>
+      <li>The loop <strong>cannot</strong> run forever, on any of the three limits.</li>
+    </ul>
+    A rule in the prompt is a request. Show the constraint.
+  </div>
+  <p><strong>One required inventory.</strong> List everything the agent's runtime can actually reach — not just the seven tools, but every cache, bucket, database, queue and shared file it could touch if it tried. <strong>The real tool surface is everything reachable, not everything registered.</strong> The risk is near zero this build because nothing writes; the habit is the point, and it is much harder to retrofit in Build 03.</p>
+</section>
+
+<section id="s15">
+  <div class="sec-head"><span class="sec-num">15</span><h3>Provided environment &amp; test data</h3></div>
+  <p>Everything is in <span class="chip">06_invoice_review_data/</span> — read its <span class="chip">README.md</span> first. It is shared and central so all three teams test against identical bytes; do not build any of it yourself.</p>
+  <ul>
+    <li><strong>Twelve invoices</strong> arriving as email with SPF/DKIM/DMARC results, and the same twelve as chat queries.</li>
+    <li><strong>Two mock systems</strong> — an ERP (purchase orders, goods receipts, vendor master, AP history) and a policy store (four policies as prose) — plus the extraction service. <span class="chip">python mock_systems.py</span> serves all of it on port 8080, or read its ~250 deliberately boring lines as a specification and reimplement on your platform.</li>
+    <li><strong>Per-system credentials</strong> — the ERP token does not open the policy store. Your broker mints the right one for the tool being called.</li>
+    <li><strong><span class="chip">CASES.md</span></strong> — what each case forces. Not an answer key: knowing what a case tests does not tell you what the agent should conclude.</li>
+  </ul>
+  <div class="warn"><b>Shared means live.</b> All three teams run against the same environment. Treat it as production, not a scratchpad — your test setup has the same reach as a real one, and "it's only testing" is how most agent incidents start.</div>
+</section>
+
+<section id="s16">
+  <div class="sec-head"><span class="sec-num">16</span><h3>Acceptance — ten tests, all must hold</h3></div>
+  <ol class="tests">
+    <li>Show two runs where the agent investigated in a different order — and both were right.</li>
+    <li>The agent <strong>cannot</strong> call a tool that isn't in the registry. <em>Cannot</em>, not <em>doesn't</em>.</li>
+    <li>Every turn is written to the journal: what it saw, decided, called, got back.</li>
+    <li>The loop stops on each of the three limits — turns, money, time — tested separately.</li>
+    <li>No connector gets a credential except through the path that recorded the intent first.</li>
+    <li>Context is rebuilt each turn: the last result is present; stale material isn't piling up.</li>
+    <li>The policy check runs independently of the agent's reasoning — and you can show it blocking something.</li>
+    <li>A finished run replays from the journal with no model calls and no cost.</li>
+    <li>The same agent handles the same invoice arriving by email and asked about in chat — same code path, no branch on origin.</li>
+    <li>On a low-confidence extracted field, the agent does something about it — cross-checks, or states the uncertainty. It never silently treats it as fact.</li>
+  </ol>
+  <div class="warn"><b>Expect to fail T5 and T7 on the first attempt.</b> Both pass every functional test while being wrong: a credential in an environment variable works perfectly and fails T5; a guardrail in the prompt reads fine and fails T7.</div>
+</section>
+
+<section id="s17">
+  <div class="sec-head"><span class="sec-num">17</span><h3>Demo &amp; comparison table</h3></div>
+  <p><strong>The demo — 30 minutes.</strong> Show two runs that went different ways and were both right — one arriving by email, one asked in chat. Show the policy check blocking something. Show a replay. Then talk through four things:</p>
+  <ol>
+    <li>What you decided was <em>not</em> the agent's job, and why it became a tool.</li>
+    <li>What your agent actually judges — the part a rule couldn't handle.</li>
+    <li>Your hardest row in the comparison table.</li>
+    <li>One thing that is impossible in your build, and why — not that it didn't happen, but that it can't.</li>
+  </ol>
+  <p>Close with ten minutes teaching the other two teams your cloud's agent SDK. They haven't used it, and one day they may have to.</p>
+  <p><strong>The comparison table — after you build, not before.</strong> For each piece in §10, name what your platform gave you and what you wrote yourself. Where it gave you nothing, write <em>"nothing — built it ourselves"</em>; those are the most useful rows in the table. Record what your SDK provided for the loop specifically — everyone builds the same loop, so what varies is what each cloud hands you, which is exactly what the three-team design exists to find out. When you hit a wall, write down what the platform wouldn't do <em>before</em> writing the workaround; afterwards you will rationalise it.</p>
+</section>
+
+<section id="s18">
+  <div class="sec-head"><span class="sec-num">18</span><h3>Deferred by design — do not build ahead</h3></div>
+  <ul>
+    <li>Nothing that changes the world — no writes, posts, emails, approvals <span class="mono">(Build 03)</span></li>
+    <li>No waiting for humans, no pausing for days <span class="mono">(Build 04)</span></li>
+    <li>No graphs, state machines or workflow frameworks <span class="mono">(Build 04)</span></li>
+    <li>No second agent, no delegation <span class="mono">(Build 05)</span></li>
+    <li>Leave the scheduler alone — a nightly sweep means many runs from one trigger <span class="mono">(Build 05)</span></li>
+    <li>No serious retrieval or search — keep context simple; that comes later</li>
+    <li>Don't skip a piece, and don't add one</li>
+  </ul>
+  <p>Building a later build's structure early is the most common way to get this one wrong. Each deferral has a build where it arrives with its reason attached.</p>
+</section>
+
+<footer>
+  <div>Agentic Systems Lab · Giant Leap Systems — Build specification series, document 1 of 6.</div>
+  <div class="mono" style="margin-top:6px;">Companions: 00_build_journey_map.md · 03_band_a_diagram.html · 04_band_b_diagram.html · 06_invoice_review_data/README.md · CASES.md</div>
+</footer>
+
+</div>
+</body>
+</html>

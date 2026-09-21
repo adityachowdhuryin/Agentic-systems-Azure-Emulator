@@ -1,0 +1,121 @@
+{
+  "checks": [
+    {
+      "name": "mock_extract_invoice",
+      "pass": true,
+      "detail": "status=200 keys=['document_ref', 'extracted', 'field_confidence', 'note']"
+    },
+    {
+      "name": "mock_extract_has_po",
+      "pass": false,
+      "detail": "po=None sample={\"document_ref\": \"CASE-01_INV-01431\", \"extracted\": {\"invoice_number\": \"INV-01431\", \"supplier_id\": \"SUP-1001\", \"supplier_name\": \"Meridian Fasteners Pty Ltd\", \"invoice_date\": \"2026-0"
+    },
+    {
+      "name": "mock_get_purchase_order",
+      "pass": false,
+      "detail": "no po from extract"
+    },
+    {
+      "name": "mock_get_goods_receipt",
+      "pass": false,
+      "detail": "no po from extract"
+    },
+    {
+      "name": "mock_get_vendor",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "mock_get_ap_history",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "mock_search_policy",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "mock_get_policy",
+      "pass": true,
+      "detail": "status=200 id=POL-AP-001"
+    },
+    {
+      "name": "mock_rejects_wrong_scope",
+      "pass": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "broker_requires_intent",
+      "pass": true,
+      "detail": "PermissionError without intent"
+    },
+    {
+      "name": "broker_mints_after_intent",
+      "pass": true,
+      "detail": "extract-scoped-token"
+    },
+    {
+      "name": "policy_allows_in_scope",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "policy_blocks_cross_supplier",
+      "pass": true,
+      "detail": "Policy gate blocked get_vendor: supplier OTHER outside run scope SUP-1001"
+    },
+    {
+      "name": "registry_blocks_unknown",
+      "pass": true,
+      "detail": "7 tools only; check_variance unreachable"
+    },
+    {
+      "name": "registry_count_is_7",
+      "pass": true,
+      "detail": "['extract_invoice', 'get_ap_history', 'get_goods_receipt', 'get_policy', 'get_purchase_order', 'get_vendor', 'search_policy']"
+    },
+    {
+      "name": "context_omits_arrival_door",
+      "pass": true,
+      "detail": "ok"
+    },
+    {
+      "name": "admission_auth_pass",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "admission_auth_fail",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "admission_sender_to_supplier",
+      "pass": true,
+      "detail": "{'supplier_id': 'SUP-1001', 'legal_name': 'Meridian Fasteners Pty Ltd', 'remittance_email': 'ap@meridianfasteners.example', 'status': 'active', 'commercial_agreement': 'standard', 'payment_terms': 'NET30', 'primary_category': 'Consumables', 'agreement_valid_from': '2025-07-01', 'agreement_valid_to': '2027-06-30'}"
+    },
+    {
+      "name": "admission_unknown_sender",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "api_list_cases",
+      "pass": true,
+      "detail": "n=12"
+    },
+    {
+      "name": "api_list_chat_queries",
+      "pass": true,
+      "detail": "n=12"
+    },
+    {
+      "name": "api_rejects_unknown_case",
+      "pass": true,
+      "detail": "status=400 body={'detail': 'Unknown case email: CASE-DOES-NOT-EXIST'}"
+    }
+  ],
+  "live": {},
+  "failures": []
+}

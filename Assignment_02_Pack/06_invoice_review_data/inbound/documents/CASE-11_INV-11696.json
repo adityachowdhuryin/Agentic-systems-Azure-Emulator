@@ -1,0 +1,18 @@
+{
+  "invoice_number": "INV-11696",
+  "supplier_id": "SUP-1003",
+  "supplier_name": "Northvale Packaging",
+  "invoice_date": "2026-08-28",
+  "currency": "AUD",
+  "po_reference": "PO-2026-4011",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "CTN-RSC-A",
+      "quantity": 2000,
+      "unit_price": 0.66,
+      "line_total": 1320.0
+    }
+  ],
+  "total_amount": 1320.0
+}

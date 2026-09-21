@@ -1,0 +1,30 @@
+{
+  "supplier_id": "SUP-1001",
+  "invoices": [
+    {
+      "invoice_number": "INV-01417",
+      "invoice_date": "2026-08-07",
+      "total_amount": 420.0,
+      "po_reference": "PO-2026-4009",
+      "status": "paid",
+      "paid_on": "2026-09-01"
+    },
+    {
+      "invoice_number": "INV-01388",
+      "invoice_date": "2026-07-19",
+      "total_amount": 388.4,
+      "po_reference": "PO-2026-3981",
+      "status": "paid",
+      "paid_on": "2026-08-14"
+    },
+    {
+      "invoice_number": "INV-01402",
+      "invoice_date": "2026-07-28",
+      "total_amount": 256.0,
+      "po_reference": "PO-2026-3994",
+      "status": "paid",
+      "paid_on": "2026-08-22",
+      "note": "partial invoice against PO-2026-3994; balance invoiced on INV-01430"
+    }
+  ]
+}

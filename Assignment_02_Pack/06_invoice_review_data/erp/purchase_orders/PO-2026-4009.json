@@ -1,0 +1,18 @@
+{
+  "po_number": "PO-2026-4009",
+  "supplier_id": "SUP-1001",
+  "status": "open",
+  "raised_on": "2026-07-14",
+  "currency": "AUD",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "BOLT-M8-50",
+      "description": "Hex bolt M8x50",
+      "quantity_ordered": 1000,
+      "unit_price": 0.42,
+      "unit_of_measure": "each",
+      "line_total": 420.0
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "queries": [
+    {
+      "case_id": "CASE-01",
+      "query": "what's wrong with invoice INV-01431?"
+    },
+    {
+      "case_id": "CASE-02",
+      "query": "what's wrong with invoice INV-02254?"
+    },
+    {
+      "case_id": "CASE-03",
+      "query": "what's wrong with invoice INV-03504?"
+    },
+    {
+      "case_id": "CASE-04",
+      "query": "what's wrong with invoice INV-04766?"
+    },
+    {
+      "case_id": "CASE-05",
+      "query": "what's wrong with invoice INV-05149?"
+    },
+    {
+      "case_id": "CASE-06",
+      "query": "what's wrong with invoice INV-06174?"
+    },
+    {
+      "case_id": "CASE-07",
+      "query": "what's wrong with invoice INV-07940?"
+    },
+    {
+      "case_id": "CASE-08",
+      "query": "what's wrong with invoice INV-08648?"
+    },
+    {
+      "case_id": "CASE-09",
+      "query": "what's wrong with invoice INV-01417?"
+    },
+    {
+      "case_id": "CASE-10",
+      "query": "what's wrong with invoice INV-10474?"
+    },
+    {
+      "case_id": "CASE-11",
+      "query": "what's wrong with invoice INV-11696?"
+    },
+    {
+      "case_id": "CASE-12",
+      "query": "what's wrong with invoice INV-12159?"
+    }
+  ]
+}

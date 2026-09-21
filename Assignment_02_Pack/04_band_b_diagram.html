@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Band B — Reasoning &amp; Action</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#F4F6F5;--ink:#17211E;--ink-soft:#4A5551;--own:#0C6B58;--own-tint:#E3F0EC;
+        --invariant:#AE4326;--invariant-tint:#F7E9E3;--hairline:#C9D1CE;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;
+       font-size:15px;line-height:1.55;padding:0 24px 56px;}
+  .sheet{max-width:1000px;margin:0 auto;}
+  header{padding:38px 0 20px;border-bottom:2px solid var(--ink);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--ink-soft);}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(25px,4vw,36px);font-weight:700;margin:9px 0 8px;}
+  h1 .accent{color:var(--own);}
+  .lede{color:var(--ink-soft);max-width:820px;}
+  .diagram-frame{background:#fff;border:1px solid var(--hairline);border-radius:6px;
+                 padding:20px;margin-top:26px;overflow-x:auto;}
+  svg{display:block;min-width:800px;width:100%;height:auto;font-family:'IBM Plex Sans',sans-serif;}
+  svg .mono{font-family:'IBM Plex Mono',monospace;}
+  footer{margin-top:34px;padding-top:15px;border-top:2px solid var(--ink);
+         font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <div class="eyebrow">Agentic Systems Lab · Runtime Blueprint · Band B of E</div>
+  <h1>Reasoning &amp; Action<span class="accent"> · four components</span></h1>
+  <p class="lede">Where the request is finally read, and where the system acts on it.
+  <strong>Band A was a line. Band B is a loop</strong> — the agent reasons, acts, sees the result, and reasons again until it is done or its bounds run out.<br><span style="font-size:13px;">This is a <strong>teaching view, not a build unit.</strong> You cannot build this band alone: the gate below belongs to Band C and the journal beneath it to Band D. For build order see the slice map.</span></p>
+  <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:15px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;">
+    <span style="padding:3px 9px;border:1.5px solid #4A5551;border-radius:3px;color:#4A5551;background:#fff;">SLICE 02 TUPLE · C2 · T0 · A0–A1 · H1</span>
+    <span style="padding:3px 9px;border:1.5px solid #0C6B58;border-radius:3px;color:#0C6B58;background:#fff;">BOUNDED SPECIALIST</span>
+  </div>
+</header>
+
+<div class="diagram-frame">
+<svg viewBox="0 0 960 660" role="img" aria-label="Band B loop: a run arrives from Band A, the context assembler decides what the agent sees, the agent runtime reasons against the capability registry, proposed actions are gated by Band C and executed by the connector layer, and the result returns as context for the next turn">
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#17211E"/></marker>
+    <marker id="gr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0C6B58"/></marker>
+    <marker id="rj" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#AE4326"/></marker>
+    <marker id="sg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#67737A"/></marker>
+  </defs>
+
+  <!-- entry -->
+  <rect x="50" y="14" width="860" height="36" rx="5" fill="#17211E"/>
+  <text x="480" y="31" font-size="12.5" font-weight="600" fill="#EDF2F0" text-anchor="middle" font-family="Space Grotesk">from BAND A — a run with identity, owner, tenant and budget</text>
+  <text x="480" y="45" class="mono" font-size="9.5" fill="#9FD8C9" text-anchor="middle">nothing has read the request yet</text>
+  <path d="M480,50 L480,82" stroke="#17211E" stroke-width="2" marker-end="url(#ar)"/>
+
+  <!-- 06 context assembler -->
+  <rect x="240" y="86" width="460" height="86" rx="5" fill="#E3F0EC" stroke="#0C6B58" stroke-width="2"/>
+  <text x="258" y="111" class="mono" font-size="10.5" font-weight="600" fill="#0C6B58">06</text>
+  <text x="286" y="112" font-size="14.5" font-weight="600" font-family="Space Grotesk">Context assembler</text>
+  <text x="258" y="134" font-size="11" fill="#4A5551">decides what the agent sees — this turn, not the whole run</text>
+  <text x="682" y="111" class="mono" font-size="9" fill="#0C6B58" text-anchor="end">P2</text>
+  <rect x="258" y="142" width="76" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="296" y="156" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">retrieval</text>
+  <rect x="342" y="142" width="94" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="389" y="156" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">memory read</text>
+  <rect x="444" y="142" width="72" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="480" y="156" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">isolation</text>
+  <rect x="524" y="142" width="86" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="567" y="156" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">provenance</text>
+
+  <path d="M480,172 L480,204" stroke="#17211E" stroke-width="2" marker-end="url(#ar)"/>
+
+  <!-- 07 agent runtime -->
+  <rect x="240" y="208" width="460" height="92" rx="5" fill="#E3F0EC" stroke="#0C6B58" stroke-width="3.2"/>
+  <text x="258" y="233" class="mono" font-size="10.5" font-weight="600" fill="#0C6B58">07</text>
+  <text x="286" y="234" font-size="14.5" font-weight="600" font-family="Space Grotesk">Agent runtime</text>
+  <text x="682" y="233" class="mono" font-size="9" fill="#0C6B58" text-anchor="end">P1</text>
+  <text x="258" y="256" font-size="11" fill="#4A5551">reads the request, plans, proposes an action</text>
+  <text x="258" y="273" class="mono" font-size="9.5" fill="#67737A">model binding · instruction set · reasoning loop · harness</text>
+  <text x="258" y="291" class="mono" font-size="9.5" font-weight="600" fill="#AE4326">THE AGENT — one component of twenty</text>
+
+  <!-- 08 capability registry -->
+  <rect x="720" y="214" width="220" height="80" rx="5" fill="#E3F0EC" stroke="#0C6B58" stroke-width="2"/>
+  <text x="736" y="238" class="mono" font-size="10.5" font-weight="600" fill="#0C6B58">08</text>
+  <text x="764" y="239" font-size="13" font-weight="600" font-family="Space Grotesk">Capability registry</text>
+  <text x="736" y="259" font-size="10" fill="#4A5551">what the system may do</text>
+  <text x="736" y="274" class="mono" font-size="9" fill="#67737A">descriptors · risk tiers</text>
+  <text x="736" y="287" class="mono" font-size="9" fill="#67737A">side-effect class</text>
+  <path d="M716,250 L704,250" stroke="#67737A" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#sg)"/>
+  <text x="828" y="308" class="mono" font-size="9" fill="#AE4326" text-anchor="middle">declared capability,</text>
+  <text x="828" y="320" class="mono" font-size="9" fill="#AE4326" text-anchor="middle">never ambient reach</text>
+
+  <!-- fork -->
+  <path d="M380,300 L320,336" stroke="#17211E" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M590,300 L654,336" stroke="#17211E" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="316" y="322" class="mono" font-size="10" font-weight="600" fill="#17211E" text-anchor="end">NEEDS AN ACTION</text>
+  <text x="616" y="322" class="mono" font-size="10" font-weight="600" fill="#17211E">DONE</text>
+
+  <!-- gate -->
+  <rect x="120" y="340" width="420" height="36" rx="5" fill="#F7E9E3" stroke="#AE4326" stroke-width="2"/>
+  <text x="136" y="357" font-size="11.5" font-weight="600" fill="#AE4326" font-family="Space Grotesk">gated before it happens</text>
+  <text x="136" y="371" class="mono" font-size="9" fill="#AE4326">out to BAND C — Trust · approved, denied or suspended</text>
+  <path d="M330,376 L330,404" stroke="#AE4326" stroke-width="2" marker-end="url(#rj)"/>
+
+  <!-- 09 connector layer -->
+  <rect x="120" y="408" width="420" height="86" rx="5" fill="#E3F0EC" stroke="#0C6B58" stroke-width="2"/>
+  <text x="138" y="433" class="mono" font-size="10.5" font-weight="600" fill="#0C6B58">09</text>
+  <text x="166" y="434" font-size="14.5" font-weight="600" font-family="Space Grotesk">Connector layer</text>
+  <text x="138" y="456" font-size="11" fill="#4A5551">executes against the outside world</text>
+  <text x="522" y="433" class="mono" font-size="9" fill="#0C6B58" text-anchor="end">P3</text>
+  <rect x="138" y="464" width="96" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="186" y="478" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">MCP server</text>
+  <rect x="242" y="464" width="94" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="289" y="478" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">SoR adapter</text>
+  <rect x="344" y="464" width="86" height="20" rx="10" fill="#FFFFFF" stroke="#0C6B58" stroke-width="1.2"/>
+  <text x="387" y="478" class="mono" font-size="9" fill="#0C6B58" text-anchor="middle">API client</text>
+
+  <!-- return arc, via post-invocation check -->
+  <path d="M120,451 L70,451 L70,129 L236,129" stroke="#0C6B58" stroke-width="2" fill="none" marker-end="url(#gr)"/>
+  <rect x="24" y="330" width="92" height="34" rx="4" fill="#F7E9E3" stroke="#AE4326" stroke-width="1.5"/>
+  <text x="70" y="345" class="mono" font-size="8.5" fill="#AE4326" text-anchor="middle">post-invocation</text>
+  <text x="70" y="357" class="mono" font-size="8.5" fill="#AE4326" text-anchor="middle">check · BAND C</text>
+  <text x="58" y="215" class="mono" font-size="9.5" fill="#0C6B58" text-anchor="middle" transform="rotate(-90 58 215)">the result becomes context for the next turn</text>
+
+  <!-- bounds note -->
+  <rect x="580" y="408" width="360" height="86" rx="5" fill="#FFFFFF" stroke="#AE4326" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <text x="598" y="432" font-size="12.5" font-weight="600" fill="#AE4326" font-family="Space Grotesk">The loop must be bounded</text>
+  <text x="598" y="452" class="mono" font-size="9.5" fill="#4A5551">max iterations · budget ceiling · wall clock</text>
+  <text x="598" y="470" class="mono" font-size="9.5" fill="#AE4326">an unbounded loop is an incident,</text>
+  <text x="598" y="483" class="mono" font-size="9.5" fill="#AE4326">not a bug — it produces an invoice</text>
+
+  <!-- done exit -->
+  <path d="M690,336 L690,568" stroke="#17211E" stroke-width="2" marker-end="url(#ar)"/>
+
+  <rect x="50" y="572" width="860" height="40" rx="5" fill="#17211E"/>
+  <text x="480" y="589" font-size="12.5" font-weight="600" fill="#EDF2F0" text-anchor="middle" font-family="Space Grotesk">run completes — the answer goes back the way it came</text>
+  <text x="480" y="604" class="mono" font-size="9.5" fill="#9FD8C9" text-anchor="middle">every turn above was written to BAND D as it happened</text>
+
+</svg>
+</div>
+
+<footer>
+  Agentic Systems Lab · Band B of the Runtime Blueprint · companion to asl_reference_architecture_runtime_blueprint.md (the .md is authoritative)
+</footer>
+
+</div>
+</body>
+</html>

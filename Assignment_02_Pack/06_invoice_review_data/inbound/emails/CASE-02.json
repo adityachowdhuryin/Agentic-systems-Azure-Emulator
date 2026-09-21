@@ -1,0 +1,21 @@
+{
+  "message_id": "<case-02@meridianfasteners.example>",
+  "from": "ap@meridianfasteners.example",
+  "to": "ap-inbox@giantleap-lab.example",
+  "subject": "Invoice INV-02254 - Meridian Fasteners Pty Ltd",
+  "received_at": "2026-08-29T09:14:00+10:00",
+  "body_text": "Please find attached invoice INV-02254 for recent supply.\n\nRegards\nAccounts, Meridian Fasteners Pty Ltd",
+  "attachments": [
+    {
+      "filename": "INV-02254.pdf",
+      "document_ref": "CASE-02_INV-02254",
+      "content_type": "application/pdf",
+      "note": "The stored document. Call extract_invoice(document_ref) to read it \u2014 do not open it directly."
+    }
+  ],
+  "auth_results": {
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass"
+  }
+}

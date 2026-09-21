@@ -1,0 +1,18 @@
+{
+  "invoice_number": "INV-03504",
+  "supplier_id": "SUP-1001",
+  "supplier_name": "Meridian Fasteners Pty Ltd",
+  "invoice_date": "2026-08-28",
+  "currency": "AUD",
+  "po_reference": "PO-2026-4003",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "NUT-M8",
+      "quantity": 4000,
+      "unit_price": 0.12,
+      "line_total": 492.8
+    }
+  ],
+  "total_amount": 492.8
+}

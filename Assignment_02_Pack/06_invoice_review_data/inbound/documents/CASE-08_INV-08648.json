@@ -1,0 +1,18 @@
+{
+  "invoice_number": "INV-08648",
+  "supplier_id": "SUP-1005",
+  "supplier_name": "Trellis Chemicals",
+  "invoice_date": "2026-08-28",
+  "currency": "AUD",
+  "po_reference": null,
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "GSKT-60",
+      "quantity": 110,
+      "unit_price": 1.85,
+      "line_total": 203.5
+    }
+  ],
+  "total_amount": 203.5
+}

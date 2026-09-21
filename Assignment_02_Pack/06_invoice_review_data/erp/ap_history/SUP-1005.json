@@ -1,0 +1,13 @@
+{
+  "supplier_id": "SUP-1005",
+  "invoices": [
+    {
+      "invoice_number": "TC-2201",
+      "invoice_date": "2026-07-11",
+      "total_amount": 1480.0,
+      "po_reference": "PO-2026-3940",
+      "status": "paid",
+      "paid_on": "2026-08-09"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "summary": "Local A02 acceptance evidence (Foundry gpt-5 until gpt-4o-mini deploy rights).",
+  "mocks_port": 8090,
+  "model": "gpt-5",
+  "unit_tests": "backend/tests/test_band_b_acceptance.py — 6 passed (T2,T3,T4 fields,T5,T6,T7,T8 structural)",
+  "live_runs": {
+    "CASE-02": {
+      "run_id": "RUN-2026-000028",
+      "note": "T4 wall-clock stop: exception:budget_time after 9 turns @ 120s (pre-bump)"
+    },
+    "CASE-03": {
+      "run_id": "RUN-2026-000030",
+      "verdict": "exception:price-variance-out-of-tolerance",
+      "tools": [
+        "extract_invoice",
+        "get_purchase_order",
+        "get_goods_receipt",
+        "get_vendor",
+        "get_ap_history",
+        "search_policy",
+        "get_policy"
+      ],
+      "arrival_source": "case_email"
+    },
+    "CASE-05": {
+      "run_id": "RUN-2026-000031",
+      "verdict": "clean",
+      "tools": [
+        "extract_invoice",
+        "get_vendor",
+        "get_purchase_order",
+        "get_goods_receipt",
+        "get_ap_history",
+        "search_policy",
+        "get_policy"
+      ],
+      "uncertainties": [
+        "Extractor reported low confidence on total_amount, though recomputation confirms AUD 256.00."
+      ]
+    },
+    "chat_CASE-03": {
+      "run_id": "RUN-2026-000032",
+      "arrival_source": "chat"
+    }
+  },
+  "tests": {
+    "T1": {
+      "pass": true,
+      "evidence": "CASE-03 tool order starts extract→PO→GR; CASE-05 starts extract→vendor→PO — both produced coherent findings"
+    },
+    "T2": {
+      "pass": true,
+      "evidence": "registry.assert_registered raises for check_variance; connectors have no unregistered path"
+    },
+    "T3": {
+      "pass": true,
+      "evidence": "journal_turns rows with saw/decided/tool/result for each run"
+    },
+    "T4": {
+      "pass": true,
+      "evidence": "CASE-02 hit stop:time_budget; agent_loop also stops on turns and money independently"
+    },
+    "T5": {
+      "pass": true,
+      "evidence": "mint_credential(..., intent_recorded=False) raises; journal records intent before connector call"
+    },
+    "T6": {
+      "pass": true,
+      "evidence": "build_turn_messages rebuilds each turn; arrival_source never in model context"
+    },
+    "T7": {
+      "pass": true,
+      "evidence": "policy_gate.py blocks cross-supplier get_vendor and POL-BLOCK-DEMO independently of prompt"
+    },
+    "T8": {
+      "pass": true,
+      "evidence": "GET /api/v1/invoice/runs/{id}/replay → model_calls=0, cost_cents=0"
+    },
+    "T9": {
+      "pass": true,
+      "evidence": "CASE-03 email arrival_source=case_email; chat CASE-03 arrival_source=chat; same run_invoice_agent"
+    },
+    "T10": {
+      "pass": true,
+      "evidence": "CASE-05 finding.uncertainties cites low-confidence total_amount and cross-check"
+    }
+  }
+}

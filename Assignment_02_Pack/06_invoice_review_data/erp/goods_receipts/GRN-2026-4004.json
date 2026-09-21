@@ -1,0 +1,13 @@
+{
+  "grn_number": "GRN-2026-4004",
+  "po_number": "PO-2026-4004",
+  "supplier_id": "SUP-1002",
+  "received_on": "2026-08-02",
+  "lines": [
+    {
+      "line_no": 1,
+      "item_code": "BRKT-SS-12",
+      "quantity_received": 800
+    }
+  ]
+}
