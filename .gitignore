@@ -13,3 +13,7 @@ frontend/test-results/
 foundry/.venv/
 foundry/.az-cli-venv/
 foundry/.env
+
+# Live invoice extract uploads (runtime)
+data/invoice_uploads/*
+!data/invoice_uploads/.gitkeep

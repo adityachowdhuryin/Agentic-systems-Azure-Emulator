@@ -15,7 +15,9 @@ The UI defaults to **Invoice Review**. Switch modes in the dashboard header.
 | Band B invoice agent (while-loop, 7 tools, policy gate, broker, journal/replay) | Local |
 | Mock ERP / extract / policy HTTP APIs | Local `:8090` |
 | Model calls (`gpt-5-mini` via Foundry Responses API) | **Only cloud dependency** |
-| Live Zoho / Teams / Azure Phase 5 | Deferred |
+| Live Zoho attachment/body → invoice | Supported (bridge + ngrok) |
+| Live Teams JSON paste → invoice | Supported (bridge + ngrok) |
+| Azure Phase 5 | Deferred |
 
 ## Architecture (dual use case)
 
@@ -125,6 +127,42 @@ Compose starts backend + frontend only. For Invoice Review you still need mocks 
 7. **Replay journal** — climax should show **0 model calls · $0**
 8. Expand the comparison table (Foundry vs what we built) for talk track
 
+### Live Zoho Mail → invoice (Band A + Band B)
+
+**Attach** a pack-shaped invoice **`.json` / `.txt`** (e.g. `CASE-09_INV-01417.json`), **or paste** that JSON into the email body, to `aditya.chowdhury@giantleapsystems.com`. Deluge Script B downloads attachments via Zoho Mail API and forwards them to Band A; Band B extracts the upload then uses ERP/policy mocks — door **`zoho`**. Supplier comes from `supplier_id` in the file. Mail **without** usable invoice content still creates an **Invoice Review** run; Band B returns `exception:not_an_invoice` (use dashboard Zoho/Teams **simulators** for Sales Lead demos).
+
+Deluge (Script B with your account/folder IDs): [docs/zoho_deluge_live_invoice.md](docs/zoho_deluge_live_invoice.md)
+
+```bash
+# Bridge (required — Zoho cannot hit localhost)
+cd ~/Desktop/webhook && npm start          # :8080
+
+# Public tunnel → bridge (not :8000)
+ngrok http 8080
+# Update Zoho Deluge invoke URL to:
+#   https://<ngrok-host>/webhook
+```
+
+Confirm: http://127.0.0.1:8080/health · http://127.0.0.1:8000/api/v1/webhooks/zoho-mail/health · ngrok inspector http://127.0.0.1:4040  
+
+In Invoice Review, wait for a run with `door:zoho`, then journal / finding / optional chat compare.
+
+### Live Teams 1:1 → invoice (Band A + Band B)
+
+Message the sideloaded bot in a **1:1** chat and **paste pack-shaped invoice JSON** (full JSON or a `{…}` block inside a short note, same as Zoho body paste). Band A admits the live upload (`door:teams`), returns immediately, and runs Band B in the background. The bot acks, then posts a second message with the verdict when the finding is ready. Text **without** parseable invoice JSON goes to Invoice Review with `exception:not_an_invoice`. Live Teams does **not** map `CASE-XX` tags to pack fixtures — use dashboard **Play CASE** for that. Sales Lead demos: dashboard Teams simulator.
+
+```bash
+# Same bridge + ngrok as Zoho (restart if down)
+cd ~/Desktop/webhook && npm start          # :8080 (serves /api/messages)
+ngrok http 8080
+# Azure Bot messaging endpoint must be:
+#   https://<ngrok-host>/api/messages
+```
+
+Confirm: http://127.0.0.1:8080/health · http://127.0.0.1:8000/api/v1/webhooks/teams/health · ngrok inspector http://127.0.0.1:4040  
+
+In Invoice Review, look for `door:teams` and the Received Message (Teams) snippet.
+
 Assignment pack data lives under `Assignment_02_Pack/06_invoice_review_data/` (12 CASEs, expected verdicts, ERP fixtures).
 
 ## Sales Lead — how to use the UI
@@ -142,13 +180,15 @@ Switch dashboard mode to **Sales Lead**:
 |---|---|
 | Agent loop | Hand-rolled `while` on Foundry Responses API |
 | Tool registry | Exactly 7: extract, PO, GRN, vendor, AP history, search/get policy |
-| Connectors | HTTP to mocks `:8090` |
+| Connectors | HTTP to mocks `:8090` with broker credential |
 | Policy gate | Independent of the model (`policy_gate.py`) |
-| Credential broker | HMAC-scoped mint after journaled intent |
+| Credential broker | Journal-proven intent → short-lived `b1.*` HMAC tokens (T5) |
 | Journal + replay | SQLite turns; replay = no model calls |
 | Budgets | Turns / USD cents / wall-clock on the run |
 
 Inventory and §10 comparison: [docs/a02_inventory_and_comparison.md](docs/a02_inventory_and_comparison.md).
+
+Mocks accept short-lived HMAC tokens from the broker (and still accept the pack’s static scoped tokens for manual curls). Start mocks with the same `BROKER_HMAC_SECRET` as the API (default local secret matches if unset).
 
 ## Key API surface
 
@@ -173,10 +213,10 @@ Full interactive docs: http://127.0.0.1:8000/docs
 
 ```bash
 make test
-# Band B structural acceptance (T2, T3, T5–T8):
+# Band B structural acceptance (T2–T8 including three T4 budget stops):
 cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_band_b_acceptance.py -v
 
-# Live invoice harness (needs API + mocks + Foundry):
+# Live invoice harness (needs API + mocks + Foundry; honest T1–T10):
 backend/.venv/bin/python scripts/a02_acceptance.py
 ```
 
@@ -213,6 +253,6 @@ scripts/                 a02_acceptance.py and helpers
 - Local JWT / HMAC / broker secrets are for development only
 - SQLite queue and journal are single-process
 - Sales Lead mock Band B does not score leads with an LLM
-- No live Zoho CRM / Teams bot / ACA deployment in this repo yet
+- Live Zoho Mail (attachment/body invoice) / Teams CASE-tag need the sibling `~/Desktop/webhook` bridge + ngrok (not packaged in this repo)
 - UI updates via polling (~1s), not WebSockets
 - `docker compose` does not start invoice mocks

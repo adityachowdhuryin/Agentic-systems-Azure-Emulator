@@ -38,6 +38,16 @@ def resolve_supplier_from_sender(sender_email: str) -> dict | None:
     return load_vendor_email_map().get(email)
 
 
+def resolve_supplier_by_id(supplier_id: str) -> dict | None:
+    sid = (supplier_id or "").strip()
+    if not sid:
+        return None
+    path = VENDOR_DIR / f"{sid}.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text())
+
+
 def invoice_lead_id_for_supplier(supplier_id: str, document_ref: str) -> str:
     """Stable-ish lead id per document so dedupe/active-run work per invoice."""
     safe = "".join(c if c.isalnum() else "-" for c in document_ref)[:40]

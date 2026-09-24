@@ -9,7 +9,7 @@ Two systems, deliberately different in shape — because that is how it is in re
 Run:  python mock_systems.py           -> http://localhost:8080
 Deps: fastapi uvicorn   (or read it as a spec and reimplement on your platform)
 """
-import json, os, glob, random, hashlib
+import json, os, glob, random, hashlib, hmac, time
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import JSONResponse
 
@@ -21,8 +21,44 @@ def load(p):
 
 def need(token, expected, system):
     # Scoped credentials: the ERP and the policy store do NOT share one.
-    if token != expected:
-        raise HTTPException(401, f"{system}: invalid or wrongly-scoped credential")
+    # Accept legacy static pack tokens OR short-lived broker HMAC (b1.*).
+    if token == expected:
+        return
+    scope_for_static = {
+        "erp-scoped-token": "erp",
+        "extract-scoped-token": "extract",
+        "policy-scoped-token": "policy",
+        "accounting-scoped-token": "accounting",
+    }.get(expected)
+    if scope_for_static and _broker_token_ok(token, scope_for_static):
+        return
+    raise HTTPException(401, f"{system}: invalid or wrongly-scoped credential")
+
+
+def _broker_token_ok(token, expected_scope):
+    """Validate b1.{scope}.{run_id}.{exp}.{mac} with BROKER_HMAC_SECRET."""
+    if not token or not token.startswith("b1."):
+        return False
+    parts = token.split(".")
+    if len(parts) < 5:
+        return False
+    scope, exp_s, mac = parts[1], parts[-2], parts[-1]
+    run_id = ".".join(parts[2:-2])
+    try:
+        exp = int(exp_s)
+    except ValueError:
+        return False
+    if scope != expected_scope:
+        return False
+    if int(time.time()) > exp:
+        return False
+    secret = os.environ.get("BROKER_HMAC_SECRET", "local-broker-hmac-secret-change-me")
+    expected_mac = hmac.new(
+        secret.encode(),
+        f"{scope}:{run_id}:{exp}".encode(),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+    return hmac.compare_digest(mac, expected_mac)
 
 # ─────────────────────────── ERP ───────────────────────────
 ERP_TOKEN = "erp-scoped-token"
@@ -63,19 +99,68 @@ def _conf(doc_ref, field):
     r = (h % 1000) / 1000.0
     return 0.55 + r * 0.20 if r < 0.12 else 0.93 + r * 0.07   # ~12% of fields are shaky
 
+
+def _field_present(inv: dict, key: str) -> bool:
+    if key not in inv:
+        return False
+    val = inv.get(key)
+    if val is None:
+        return False
+    if isinstance(val, str) and not val.strip():
+        return False
+    if isinstance(val, (list, dict)) and len(val) == 0:
+        return False
+    return True
+
+
 @app.get("/extraction/invoice")
 def extract_invoice(document_ref: str, x_credential: str = Header(None)):
     need(x_credential, EXTRACT_TOKEN, "Extraction service")
-    matches = glob.glob(f"{ROOT}/inbound/documents/*{document_ref}*.json")
-    if not matches: raise HTTPException(404, "document not found")
-    inv = load(matches[0].replace(ROOT + os.sep, ""))
+    # Live Zoho uploads (repo data/invoice_uploads) take precedence over pack fixtures
+    uploads_roots = [
+        os.environ.get("INVOICE_UPLOADS_DIR"),
+        os.path.join(ROOT, "invoice_uploads"),
+        os.path.abspath(os.path.join(ROOT, "..", "..", "..", "data", "invoice_uploads")),
+        os.path.abspath(os.path.join(ROOT, "..", "..", "data", "invoice_uploads")),
+    ]
+    inv = None
+    for up in uploads_roots:
+        if not up:
+            continue
+        exact = os.path.join(up, f"{document_ref}.json")
+        if os.path.isfile(exact):
+            with open(exact) as f:
+                inv = json.load(f)
+            break
+        matches = glob.glob(os.path.join(up, f"*{document_ref}*.json"))
+        if matches:
+            with open(matches[0]) as f:
+                inv = json.load(f)
+            break
+    if inv is None:
+        matches = glob.glob(f"{ROOT}/inbound/documents/*{document_ref}*.json")
+        if not matches:
+            raise HTTPException(404, "document not found")
+        inv = load(matches[0].replace(ROOT + os.sep, ""))
+    if "lines" not in inv:
+        inv["lines"] = []
     out = {"document_ref": document_ref, "extracted": inv, "field_confidence": {}}
+    non_invoice = inv.get("inbound_kind") == "non_invoice"
     for k in ("invoice_number", "supplier_id", "invoice_date", "po_reference", "total_amount"):
-        out["field_confidence"][k] = round(_conf(document_ref, k), 3)
-    for line in inv["lines"]:
+        if not _field_present(inv, k):
+            continue
+        score = _conf(document_ref, k)
+        if non_invoice and k == "invoice_number":
+            score = min(score, 0.62)
+        out["field_confidence"][k] = round(score, 3)
+    if non_invoice:
+        out["field_confidence"]["inbound_kind"] = 0.99
+        if _field_present(inv, "raw_text"):
+            out["field_confidence"]["raw_text"] = 0.99
+    for line in inv.get("lines") or []:
         for k in ("item_code", "quantity", "unit_price"):
-            out["field_confidence"][f"line_{line['line_no']}.{k}"] = round(
-                _conf(document_ref, f"{line['line_no']}{k}"), 3)
+            out["field_confidence"][f"line_{line.get('line_no', 0)}.{k}"] = round(
+                _conf(document_ref, f"{line.get('line_no', 0)}{k}"), 3)
     out["note"] = ("Confidence below 0.90 means the extractor is unsure of that field. "
                    "It may still be correct. Deciding what to do about it is your problem.")
     return out

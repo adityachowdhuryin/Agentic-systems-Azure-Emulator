@@ -1,4 +1,4 @@
-# Assignment 02 — Local sandbox inventory & comparison table (draft)
+# Assignment 02 — Local sandbox inventory & comparison table
 
 ## Inventory (what runs locally)
 
@@ -11,13 +11,28 @@
 | Tool registry (exactly 7) | `backend/app/band_b/registry.py` | Unregistered = unreachable |
 | Connectors | `backend/app/band_b/connectors.py` | HTTP → `http://127.0.0.1:8090` |
 | Policy gate | `backend/app/band_b/policy_gate.py` | Independent module (T7) |
-| Credential broker | `backend/app/band_b/broker.py` | Intent journaled first (T5) |
+| Credential broker | `backend/app/band_b/broker.py` | Journal-proven intent → short-lived `b1.*` HMAC tokens (T5) |
 | Journal + replay | `backend/app/band_b/journal.py` | Replay = 0 model calls |
 | Context assembler | `backend/app/band_b/context.py` | Rebuild each turn; last 6 tool results |
-| Mock systems | `services/mock_systems/run_mocks.py` | Port **8090** (pack default 8080; webhook uses 8080) |
+| Mock systems | `services/mock_systems/run_mocks.py` | Port **8090**; accepts HMAC + static pack tokens |
 | Foundry model | `foundry/.env` | `gpt-5-mini` (gpt-4o-mini deprecated on account) |
 | UI | Dashboard mode switch Invoice / Sales Lead | CASE player, finding, journal, replay |
-| API | `/api/v1/invoice/*` | cases, chat, finding, journal, replay |
+| API | `/api/v1/invoice/*` | cases, chat, finding, journal, replay, policy-block |
+
+## §14 Reachable surface (agent runtime)
+
+Everything the invoice agent process can actually touch if it tried — not only the seven registered tools:
+
+| Reachable | What | Write? |
+|---|---|---|
+| Foundry Responses API | Model calls via `DefaultAzureCredential` | No (read inference) |
+| Mocks `:8090` | Extract / ERP / policy HTTP | No (read-only tools) |
+| SQLite `data/band_a.db` | runs, journal_turns, findings, queue, leads, events | Yes (journal / finding / run state) |
+| In-process queue consumer | `mock_consumer` for async dispatch | Yes (dequeues) |
+| CASE / pack fixtures on disk | `Assignment_02_Pack/06_invoice_review_data/` | No (read via mocks) |
+| `foundry/.env` / process env | Endpoint, model name, broker secret | Read at startup |
+
+Risk this build is near zero because tools are read-only; listing the surface is the habit for Build 03.
 
 ## Comparison table (Azure AI Foundry / Python SDK)
 
@@ -27,12 +42,12 @@
 | Tool registry | Function tool schema on Responses call | Hard allowlist of 7; `assert_registered` |
 | Connectors | nothing | HTTP client to local mocks |
 | Policy gate | nothing | `policy_gate.py` independent of prompt |
-| Credential broker | nothing | HMAC-bound mint after journal intent; pack-compatible scoped tokens |
+| Credential broker | nothing | DB intent check + short-lived HMAC; mocks verify scope/TTL |
 | Journal | nothing | SQLite `journal_turns` + `findings` |
 | Replay | nothing | Rebuild narrative from journal; `model_calls=0` |
 | Context assembler | nothing | Rebuild messages each turn; truncate trail |
 | Limits | nothing | turns / USD cents / wall-clock on run row |
-| Finding | nothing | Structured JSON persisted + UI |
+| Finding | nothing | Structured JSON + `policy_choice_reason` + UI |
 
 ## Deferred (Phase 5)
 
@@ -40,5 +55,5 @@ Azure ACA / Service Bus / SQL / Blob / Key Vault and live Zoho/Teams invoice bri
 
 ## Acceptance
 
-- Unit: `backend/tests/test_band_b_acceptance.py` (T2, T3, T5–T8 structural)
-- Live harness: `scripts/a02_acceptance.py` (needs API + mocks + Foundry)
+- Unit: `backend/tests/test_band_b_acceptance.py` (T2, T3, T4 stop×3, T5–T8 structural)
+- Live harness: `scripts/a02_acceptance.py` (needs API + mocks + Foundry; exercises T1–T10 without hardcoded passes)

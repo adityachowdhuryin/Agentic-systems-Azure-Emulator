@@ -287,6 +287,7 @@ export interface InvoiceFinding {
   verdict: string;
   checks: Array<{ what?: string; result?: string } | Record<string, unknown>>;
   policy_ids: string[];
+  policy_choice_reason?: string;
   reasoning: string;
   uncertainties: string[];
   raw_text: string;
@@ -405,6 +406,9 @@ export interface InboundMail {
   mail_body: string;
   mail_message_id: string;
   received_at: string | null;
+  attachment_filename?: string;
+  invoice_content?: string;
+  invoice_source?: string;
 }
 
 export interface InboundTeams {

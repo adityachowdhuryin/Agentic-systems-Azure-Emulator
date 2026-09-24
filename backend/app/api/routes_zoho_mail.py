@@ -7,7 +7,7 @@ from app.config import settings
 from app.correlation import new_correlation_id
 from app.database import get_db
 from app.error_utils import band_a_error_detail
-from app.exceptions import BandAError
+from app.exceptions import BandAError, ValidationError
 from app.ingestion.zoho_mail_adapter import ZohoMailAdapter
 
 router = APIRouter(prefix="/api/v1", tags=["zoho-mail"])
@@ -28,7 +28,9 @@ async def zoho_mail_webhook(
 ):
     """
     Accept raw Zoho Mail / Zoho Flow webhook payloads.
-    Creates a lead from the email and enters Band A.
+
+    - Attachment (.json/.txt) or body paste with pack-shaped invoice → invoice_review + Band B
+    - Otherwise → invoice_review non_invoice path (Band B exception:not_an_invoice)
     """
     correlation_id = request.headers.get("X-Correlation-ID") or new_correlation_id()
     try:
@@ -39,7 +41,11 @@ async def zoho_mail_webhook(
     adapter = ZohoMailAdapter(db)
     try:
         result = adapter.process_inbound_mail(raw, correlation_id=correlation_id)
+        db.commit()
         return {"status": "accepted", **result}
+    except ValidationError as exc:
+        db.rollback()
+        raise HTTPException(400, str(exc)) from exc
     except BandAError as exc:
         db.commit()
         raise HTTPException(exc.status_code, detail=band_a_error_detail(exc)) from exc
@@ -51,4 +57,5 @@ def zoho_mail_health():
         "status": "ok",
         "monitor_address": settings.mail_monitor_address,
         "tenant_id": settings.mail_tenant_id,
+        "invoice_ingress": "Attach or paste pack-shaped .json/.txt invoice (supplier_id required)",
     }

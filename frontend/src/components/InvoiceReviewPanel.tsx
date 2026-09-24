@@ -11,12 +11,16 @@ import {
   fetchInvoiceJournal,
   fetchInvoiceReplay,
   fetchInvoiceRuns,
+  fetchRunInboundMail,
+  fetchRunInboundTeams,
   ingestInvoiceCase,
   startWorker,
   type InvoiceCase,
   type InvoiceFinding,
   type InvoiceHealth,
   type InvoiceRunSummary,
+  type InboundMail,
+  type InboundTeams,
   type JournalTurn,
 } from "../services/api";
 
@@ -54,8 +58,14 @@ const COMPARISON_ROWS: { piece: string; platform: string; ours: string }[] = [
 
 function doorLabel(arrival?: string | null) {
   if (arrival === "chat") return "chat";
+  if (arrival === "zoho_mail") return "zoho";
+  if (arrival === "teams") return "teams";
   if (arrival === "case_email") return "email";
   return arrival || "—";
+}
+
+function isIngressDoor(arrival?: string | null) {
+  return arrival === "case_email" || arrival === "zoho_mail" || arrival === "teams";
 }
 
 function toolOrder(turns: JournalTurn[]) {
@@ -82,6 +92,8 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   const [selectedCase, setSelectedCase] = useState("CASE-03");
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [finding, setFinding] = useState<InvoiceFinding | null>(null);
+  const [inboundMail, setInboundMail] = useState<InboundMail | null>(null);
+  const [inboundTeams, setInboundTeams] = useState<InboundTeams | null>(null);
   const [turns, setTurns] = useState<JournalTurn[]>([]);
   const [replay, setReplay] = useState<{ model_calls: number; cost_cents: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -95,10 +107,14 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   const [investigateStartedAt, setInvestigateStartedAt] = useState<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const journalRef = useRef<HTMLDivElement>(null);
+  const knownRunIdsRef = useRef<Set<string>>(new Set());
+  const seededRunsRef = useRef(false);
 
   const clearSelection = useCallback(() => {
     setActiveRunId(null);
     setFinding(null);
+    setInboundMail(null);
+    setInboundTeams(null);
     setTurns([]);
     setReplay(null);
     setCompareIds([null, null]);
@@ -111,7 +127,32 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
     setCases(c.cases);
     setRuns(r);
     setSelectedCase((prev) => prev || c.cases.find((x) => x.case_id === "CASE-03")?.case_id || c.cases[0]?.case_id || "");
+
+    const ids = new Set(r.map((x) => x.run_id));
+    let autoPick: string | null = null;
+    if (!seededRunsRef.current) {
+      knownRunIdsRef.current = ids;
+      seededRunsRef.current = true;
+    } else {
+      const newcomers = r.filter(
+        (x) =>
+          (x.arrival_source === "zoho_mail" || x.arrival_source === "teams") &&
+          !knownRunIdsRef.current.has(x.run_id)
+      );
+      knownRunIdsRef.current = ids;
+      if (newcomers.length > 0) {
+        autoPick = newcomers[0].run_id;
+        setReplay(null);
+        const door = newcomers[0].arrival_source === "teams" ? "Teams" : "Zoho";
+        onBanner(`Live ${door} → ${autoPick}`, "success");
+      }
+    }
+
     setActiveRunId((prev) => {
+      if (autoPick) {
+        onWatchRun(autoPick);
+        return autoPick;
+      }
       if (prev && !r.some((x) => x.run_id === prev)) {
         setFinding(null);
         setTurns([]);
@@ -121,9 +162,11 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
       }
       return prev;
     });
-  }, [tenant, onWatchRun]);
+  }, [tenant, onWatchRun, onBanner]);
 
   useEffect(() => {
+    knownRunIdsRef.current = new Set();
+    seededRunsRef.current = false;
     clearSelection();
     void refresh().catch((e) => onBanner(e instanceof Error ? e.message : "Load failed", "error", false));
   }, [resetNonce]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -131,6 +174,14 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   useEffect(() => {
     void refresh().catch((e) => onBanner(e instanceof Error ? e.message : "Load failed", "error", false));
   }, [refresh, onBanner]);
+
+  // Live Zoho / external arrivals — runs list must poll (not only refresh on mount/actions)
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refresh().catch(() => {});
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [refresh]);
 
   useEffect(() => {
     const load = () =>
@@ -149,7 +200,11 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   }, []);
 
   const activeRun = runs.find((r) => r.run_id === activeRunId);
-  const investigating = !!busy || activeRun?.state === "REVIEWING";
+  const investigating =
+    !!busy ||
+    activeRun?.state === "REVIEWING" ||
+    ((activeRun?.arrival_source === "zoho_mail" || activeRun?.arrival_source === "teams") &&
+      (activeRun?.state === "QUEUED" || activeRun?.state === "DISPATCHED"));
 
   useEffect(() => {
     if (investigating) {
@@ -173,6 +228,8 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
       setFinding(null);
       setTurns([]);
       setReplay(null);
+      setInboundMail(null);
+      setInboundTeams(null);
       return;
     }
     const load = async () => {
@@ -193,6 +250,30 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
     return () => window.clearInterval(id);
   }, [activeRunId]);
 
+  useEffect(() => {
+    if (!activeRunId) {
+      setInboundMail(null);
+      setInboundTeams(null);
+      return;
+    }
+    if (activeRun?.arrival_source === "zoho_mail") {
+      setInboundTeams(null);
+      void fetchRunInboundMail(activeRunId)
+        .then(setInboundMail)
+        .catch(() => setInboundMail(null));
+      return;
+    }
+    if (activeRun?.arrival_source === "teams") {
+      setInboundMail(null);
+      void fetchRunInboundTeams(activeRunId)
+        .then(setInboundTeams)
+        .catch(() => setInboundTeams(null));
+      return;
+    }
+    setInboundMail(null);
+    setInboundTeams(null);
+  }, [activeRunId, activeRun?.arrival_source]);
+
   const sortedCases = useMemo(() => {
     const pinned = Object.keys(PINNED_CASES);
     return [...cases].sort((a, b) => {
@@ -208,7 +289,7 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   const demoStep = useMemo(() => {
     if (replay) return "replay";
     if (turns.some((t) => t.blocked_by_policy)) return "policy";
-    const hasEmail = runs.some((r) => r.arrival_source === "case_email");
+    const hasEmail = runs.some((r) => isIngressDoor(r.arrival_source));
     const hasChat = runs.some((r) => r.arrival_source === "chat");
     if (hasEmail && hasChat) return "chat";
     if (hasEmail) return "email";
@@ -219,10 +300,10 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
     const a = compareIds[0] ? runs.find((r) => r.run_id === compareIds[0]) : null;
     const b = compareIds[1] ? runs.find((r) => r.run_id === compareIds[1]) : null;
     if (a && b) return [a, b] as const;
-    // Auto: same document_ref, email + chat
+    // Auto: same document_ref, email/zoho/teams + chat
     for (const r of runs) {
       if (!r.document_ref) continue;
-      const email = runs.find((x) => x.document_ref === r.document_ref && x.arrival_source === "case_email");
+      const email = runs.find((x) => x.document_ref === r.document_ref && isIngressDoor(x.arrival_source));
       const chat = runs.find((x) => x.document_ref === r.document_ref && x.arrival_source === "chat");
       if (email && chat) return [email, chat] as const;
     }
@@ -421,6 +502,18 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
           Email → async or sync · chat always sync · agent never sees which door · mocks :8090 · Foundry{" "}
           {health?.model.name || "gpt-5-mini"}
         </p>
+        <p className="text-xs text-muted">
+          Live Zoho: <span className="font-semibold">attach</span> pack{" "}
+          <span className="font-mono">.json</span>/<span className="font-mono">.txt</span>{" "}
+          <span className="font-semibold">or paste</span> JSON in the body to{" "}
+          <span className="font-mono">aditya.chowdhury@giantleapsystems.com</span> → door{" "}
+          <span className="font-mono">zoho</span>. Live Teams 1:1:{" "}
+          <span className="font-semibold">paste</span> pack JSON in the chat (prose + JSON OK) → door{" "}
+          <span className="font-mono">teams</span>. Unrelated Zoho/Teams text still lands in Invoice Review
+          with an <span className="font-mono">exception:not_an_invoice</span> finding (not Sales Lead). No live{" "}
+          <span className="font-mono">CASE-XX</span> map — use Play CASE in the UI for fixtures. Bridge :8080 +
+          ngrok + Deluge Script B required for Zoho file attach. Use dashboard simulators for Sales Lead demos.
+        </p>
         {investigating && (
           <div className="flex items-center gap-2 text-sm bg-own-tint text-own px-3 py-2 rounded-md">
             <span className="inline-block w-3 h-3 border-2 border-own border-t-transparent rounded-full animate-spin" />
@@ -517,10 +610,97 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
               </span>
               <span className="font-mono text-[10px] text-muted">{finding.dispatch_route}</span>
             </div>
+            {inboundMail && (
+              <div className="rounded-md border border-line bg-gray-50 px-3 py-2 text-xs space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="font-semibold text-own">Received email (Zoho)</div>
+                  {(() => {
+                    try {
+                      const parsed = inboundMail.invoice_content
+                        ? JSON.parse(inboundMail.invoice_content)
+                        : null;
+                      return parsed?.inbound_kind === "non_invoice" ? (
+                        <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                          non-invoice
+                        </span>
+                      ) : null;
+                    } catch {
+                      return null;
+                    }
+                  })()}
+                </div>
+                <div>
+                  <span className="text-muted">From:</span> {inboundMail.mail_from || "—"}
+                </div>
+                <div>
+                  <span className="text-muted">Subject:</span> {inboundMail.mail_subject || "—"}
+                </div>
+                {(inboundMail.attachment_filename || inboundMail.invoice_source) && (
+                  <div>
+                    <span className="text-muted">Invoice source:</span>{" "}
+                    {inboundMail.attachment_filename
+                      ? inboundMail.attachment_filename
+                      : inboundMail.invoice_source || "body"}
+                  </div>
+                )}
+                {inboundMail.mail_body ? (
+                  <pre className="text-muted whitespace-pre-wrap font-sans max-h-28 overflow-y-auto text-[11px]">
+                    {inboundMail.mail_body}
+                  </pre>
+                ) : null}
+                {inboundMail.invoice_content ? (
+                  (() => {
+                    let nonInv = false;
+                    try {
+                      nonInv =
+                        JSON.parse(inboundMail.invoice_content)?.inbound_kind === "non_invoice";
+                    } catch {
+                      nonInv = false;
+                    }
+                    if (nonInv) {
+                      return (
+                        <details className="pt-1">
+                          <summary className="cursor-pointer text-muted">
+                            Stored extract payload
+                          </summary>
+                          <pre className="text-muted whitespace-pre-wrap font-mono max-h-32 overflow-y-auto text-[11px] mt-1">
+                            {inboundMail.invoice_content}
+                          </pre>
+                        </details>
+                      );
+                    }
+                    return (
+                      <pre className="text-muted whitespace-pre-wrap font-mono max-h-40 overflow-y-auto text-[11px]">
+                        {inboundMail.invoice_content}
+                      </pre>
+                    );
+                  })()
+                ) : null}
+              </div>
+            )}
+            {inboundTeams && (
+              <div className="rounded-md border border-line bg-gray-50 px-3 py-2 text-xs space-y-1">
+                <div className="font-semibold text-own">Received message (Teams)</div>
+                <div>
+                  <span className="text-muted">From:</span> {inboundTeams.teams_from || "—"}
+                </div>
+                {inboundTeams.teams_text && (
+                  <p className="text-muted whitespace-pre-wrap line-clamp-3">{inboundTeams.teams_text}</p>
+                )}
+              </div>
+            )}
             {budget && (
               <div className="grid sm:grid-cols-3 gap-2 text-xs font-mono">
                 <div className="bg-gray-50 rounded px-2 py-1.5">
-                  turns {budget.turns_used ?? 0}/{budget.turns ?? "—"}
+                  <details>
+                    <summary className="cursor-pointer list-none underline decoration-dotted decoration-muted underline-offset-2 hover:text-own [&::-webkit-details-marker]:hidden">
+                      Turns {budget.turns_used ?? 0}/{budget.turns ?? "—"}
+                    </summary>
+                    <p className="mt-1 text-[10px] text-muted font-sans normal-case leading-snug no-underline">
+                      Turns: each Foundry call in the agent loop. Budget stops when this hits the cap.
+                      One reply can request several tools.
+                    </p>
+                  </details>
                   <div className="h-1 mt-1 bg-gray-200 rounded overflow-hidden">
                     <div
                       className="h-full bg-own"
@@ -559,6 +739,11 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
             )}
             {finding.policy_ids?.length > 0 && (
               <div className="font-mono text-xs">Policies: {finding.policy_ids.join(", ")}</div>
+            )}
+            {finding.policy_choice_reason && (
+              <div className="text-xs text-muted">
+                Policy choice: {finding.policy_choice_reason}
+              </div>
             )}
             {finding.uncertainties?.length > 0 && (
               <div>
@@ -602,9 +787,17 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
 
       {/* F. Journal */}
       <div className="rounded-xl border border-line bg-white p-4" ref={journalRef}>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-start justify-between gap-3 mb-2">
           <h3 className="font-semibold">Journal</h3>
-          <span className="text-xs text-muted font-mono">{turns.length} turns</span>
+          <details className="text-xs text-muted font-mono text-right max-w-[14rem]">
+            <summary className="cursor-pointer list-none underline decoration-dotted underline-offset-2 hover:text-own [&::-webkit-details-marker]:hidden">
+              {turns.length} Steps
+            </summary>
+            <p className="mt-1 text-[10px] font-sans normal-case leading-snug text-left no-underline">
+              Steps: one journal row per tool call and the final finding. If the model batches tools in
+              one reply, steps can exceed turns.
+            </p>
+          </details>
         </div>
         <ol className="space-y-2 max-h-96 overflow-auto text-sm">
           {turns.map((t) => {

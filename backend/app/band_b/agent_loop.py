@@ -18,7 +18,7 @@ from app.band_b.journal import record_turn, save_finding
 from app.band_b.policy_gate import check_tool_allowed
 from app.band_b.registry import TOOL_SCHEMAS, assert_registered
 from app.config import settings
-from app.database import Finding, JournalTurn, LeadStatus, Run, RunState, UseCase
+from app.database import Finding, InboundEvent, JournalTurn, LeadStatus, Run, RunState, UseCase
 from app.repositories.base import LeadRepository, RunRepository
 from app.security import add_runtime_event
 
@@ -28,6 +28,23 @@ logger = logging.getLogger(__name__)
 _FOUNDRY_ENV = Path(__file__).resolve().parents[3] / "foundry" / ".env"
 if _FOUNDRY_ENV.exists():
     load_dotenv(_FOUNDRY_ENV, override=False)
+
+
+def _inbound_kind_for_run(db: Session, run: Run) -> str | None:
+    if not run.inbound_event_id:
+        return None
+    ev = db.query(InboundEvent).filter(InboundEvent.event_id == run.inbound_event_id).first()
+    if not ev or not ev.payload_json:
+        return None
+    try:
+        stored = json.loads(ev.payload_json)
+    except json.JSONDecodeError:
+        return None
+    inner = stored.get("payload") if isinstance(stored.get("payload"), dict) else stored
+    if not isinstance(inner, dict):
+        return None
+    kind = inner.get("inbound_kind")
+    return str(kind) if kind else None
 
 
 def _model_name() -> str:
@@ -159,6 +176,7 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
 
     prior: list[dict] = []
     final: dict | None = None
+    inbound_kind = _inbound_kind_for_run(db, run)
 
     while True:
         elapsed = time.time() - started
@@ -219,10 +237,12 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
             document_ref=run.document_ref or "",
             supplier_id=run.supplier_id,
             prior_turns=prior,
+            inbound_kind=inbound_kind,
         )
         saw = {
             "document_ref": run.document_ref,
             "supplier_id": run.supplier_id,
+            "inbound_kind": inbound_kind,
             "prior_tool_count": len([p for p in prior if p.get("tool_name")]),
         }
 
@@ -341,12 +361,19 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
             db.flush()
 
             try:
-                cred = mint_credential(tool_name, run_id=run.run_id, intent_recorded=True)
+                cred = mint_credential(db, run_id=run.run_id, tool_name=tool_name)
                 result = connectors.call(tool_name, tool_args, cred)
             except Exception as exc:
                 result = {"error": str(exc)}
+                cred = None
 
-            intent_turn.tool_result_json = json.dumps(result)
+            journal_result = result
+            if cred and isinstance(result, dict) and "error" not in result:
+                journal_result = {
+                    **result,
+                    "_broker": {"credential_kind": "b1", "token_prefix": cred[:24]},
+                }
+            intent_turn.tool_result_json = json.dumps(journal_result)
             prior.append(
                 {
                     "decided": f"call:{tool_name}",
@@ -378,6 +405,7 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
         reasoning=str(final.get("reasoning") or ""),
         uncertainties=final.get("uncertainties") or [],
         raw_text=str(final.get("raw_text") or final.get("reasoning") or ""),
+        policy_choice_reason=str(final.get("policy_choice_reason") or ""),
     )
     runs.update_state(run, RunState.FINDING_READY.value, "Finding ready")
     lead = leads.get_by_lead_id(run.lead_id)

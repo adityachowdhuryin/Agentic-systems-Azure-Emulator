@@ -212,6 +212,7 @@ class Finding(Base):
     reasoning: Mapped[str] = mapped_column(Text, default="")
     uncertainties_json: Mapped[str] = mapped_column(Text, default="[]")
     raw_text: Mapped[str] = mapped_column(Text, default="")
+    policy_choice_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     run: Mapped["Run"] = relationship(back_populates="finding")
@@ -263,6 +264,7 @@ def migrate_schema() -> None:
     _sqlite_add_column("runs", "budget_seconds", "INTEGER DEFAULT 120")
     _sqlite_add_column("runs", "budget_turns_used", "INTEGER DEFAULT 0")
     _sqlite_add_column("runs", "budget_usd_spent_cents", "INTEGER DEFAULT 0")
+    _sqlite_add_column("findings", "policy_choice_reason", "TEXT")
     # Orphans appear when SQLite ran without foreign_keys and run_ids were recycled
     if settings.database_url.startswith("sqlite"):
         with engine.connect() as conn:

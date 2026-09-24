@@ -131,6 +131,7 @@ def get_finding(run_id: str, db: Session = Depends(get_db)):
         "verdict": finding.verdict,
         "checks": json.loads(finding.checks_json or "[]"),
         "policy_ids": json.loads(finding.policy_ids_json or "[]"),
+        "policy_choice_reason": finding.policy_choice_reason or "",
         "reasoning": finding.reasoning,
         "uncertainties": json.loads(finding.uncertainties_json or "[]"),
         "raw_text": finding.raw_text,

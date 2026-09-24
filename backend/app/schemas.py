@@ -142,6 +142,9 @@ class InboundMailResponse(BaseModel):
     mail_body: str
     mail_message_id: str
     received_at: str | None = None
+    attachment_filename: str = ""
+    invoice_content: str = ""
+    invoice_source: str = ""
 
 
 class InboundTeamsResponse(BaseModel):

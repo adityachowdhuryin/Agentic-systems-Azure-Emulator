@@ -31,12 +31,24 @@ export function InboundMailPanel({ mail }: { mail: InboundMail }) {
   const [view, setView] = useState<"plain" | "html" | "raw">("plain");
   const bodyIsHtml = isHtml(mail.mail_body);
   const plainBody = bodyIsHtml ? stripHtml(mail.mail_body) : decodeEntities(mail.mail_body);
+  let nonInvoice = false;
+  try {
+    const parsed = mail.invoice_content ? JSON.parse(mail.invoice_content) : null;
+    nonInvoice = parsed?.inbound_kind === "non_invoice";
+  } catch {
+    nonInvoice = false;
+  }
 
   return (
     <section className="bg-white border border-hairline rounded-md p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="font-display font-semibold">Received Email (Zoho Webhook)</h2>
-        <div className="flex gap-1">
+        <div className="flex gap-1 items-center">
+          {nonInvoice && (
+            <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+              non-invoice
+            </span>
+          )}
           {(["plain", "html", "raw"] as const).map((mode) => (
             <button
               key={mode}
@@ -92,6 +104,38 @@ export function InboundMailPanel({ mail }: { mail: InboundMail }) {
           <pre className="text-xs whitespace-pre-wrap font-mono">{mail.mail_body || "(empty body)"}</pre>
         )}
       </div>
+
+      {mail.invoice_content ? (
+        <div className="mt-4 border border-hairline rounded-md bg-gray-50 p-3">
+          {nonInvoice ? (
+            <details>
+              <summary className="cursor-pointer font-semibold text-sm text-own">
+                Stored extract payload (non-invoice)
+                <span className="font-mono text-xs text-muted font-normal ml-2">
+                  {mail.invoice_source || "body"}
+                </span>
+              </summary>
+              <pre className="mt-2 text-xs whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                {mail.invoice_content}
+              </pre>
+            </details>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                <h3 className="font-semibold text-sm text-own">Invoice content</h3>
+                <span className="font-mono text-xs text-muted">
+                  {mail.attachment_filename
+                    ? `file: ${mail.attachment_filename}`
+                    : mail.invoice_source || "body paste"}
+                </span>
+              </div>
+              <pre className="text-xs whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                {mail.invoice_content}
+              </pre>
+            </>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

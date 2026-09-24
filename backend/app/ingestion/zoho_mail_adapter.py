@@ -22,10 +22,17 @@ def _first_str(*values: Any) -> str:
 
 
 def _clean_mail_text(value: str) -> str:
-    """Decode HTML entities Zoho sometimes sends (&lt;email&gt;) and trim."""
+    """Decode HTML entities, strip tags Zoho often sends as body HTML, and trim."""
     if not value:
         return ""
-    return html.unescape(value).strip()
+    text = html.unescape(value)
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</p\s*>", "\n", text)
+    text = re.sub(r"(?i)</div\s*>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\r\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _dig(data: dict[str, Any], *paths: str) -> str:
@@ -170,7 +177,90 @@ class ZohoMailAdapter:
         *,
         correlation_id: str,
     ) -> dict[str, Any]:
+        from app.exceptions import ValidationError
+        from app.ingestion.invoice_case_adapter import (
+            ingest_live_non_invoice,
+            ingest_zoho_live_invoice,
+        )
+        from app.ingestion.live_invoice_content import (
+            resolve_live_invoice_from_mail,
+            resolve_non_invoice_from_mail,
+        )
+
         parsed = parse_zoho_mail_payload(raw)
+        live = resolve_live_invoice_from_mail(
+            raw,
+            body=parsed.get("body") or "",
+            message_id=parsed.get("message_id") or "",
+        )
+        if live:
+            invoice, document_ref, source_label = live
+            try:
+                result = ingest_zoho_live_invoice(
+                    self.db,
+                    live_mail=parsed,
+                    invoice=invoice,
+                    document_ref=document_ref,
+                    invoice_source=source_label,
+                    force_sync=True,
+                )
+            except ValidationError as exc:
+                raise ValidationError(str(exc)) from exc
+            return {
+                "use_case": "invoice_review",
+                "run_id": result.get("run_id"),
+                "state": result.get("state"),
+                "document_ref": result.get("document_ref"),
+                "supplier_id": result.get("supplier_id"),
+                "arrival_source": result.get("arrival_source"),
+                "correlation_id": result.get("correlation_id") or correlation_id,
+                "duplicate": result.get("duplicate", False),
+                "rejected": result.get("rejected", False),
+                "live_invoice": True,
+                "parsed_mail": parsed,
+            }
+
+        # Live Zoho always invoice_review — unrelated mail → Band B exception finding
+        document, document_ref, source_label = resolve_non_invoice_from_mail(
+            raw,
+            body=parsed.get("body") or "",
+            message_id=parsed.get("message_id") or "",
+            subject=parsed.get("subject") or "",
+        )
+        try:
+            result = ingest_live_non_invoice(
+                self.db,
+                document=document,
+                document_ref=document_ref,
+                invoice_source=source_label,
+                arrival_source="zoho_mail",
+                force_sync=True,
+                live_mail=parsed,
+            )
+        except ValidationError as exc:
+            raise ValidationError(str(exc)) from exc
+        return {
+            "use_case": "invoice_review",
+            "run_id": result.get("run_id"),
+            "state": result.get("state"),
+            "document_ref": result.get("document_ref"),
+            "supplier_id": result.get("supplier_id"),
+            "arrival_source": result.get("arrival_source"),
+            "correlation_id": result.get("correlation_id") or correlation_id,
+            "duplicate": result.get("duplicate", False),
+            "rejected": result.get("rejected", False),
+            "live_invoice": True,
+            "inbound_kind": "non_invoice",
+            "parsed_mail": parsed,
+        }
+
+    def _process_sales_lead_mail(
+        self,
+        parsed: dict[str, str],
+        *,
+        raw: dict[str, Any],
+        correlation_id: str,
+    ) -> dict[str, Any]:
         lead_data = mail_to_lead_create(parsed, tenant_id=settings.mail_tenant_id)
         lead = self.leads.create(lead_data)
         event_id = build_event_id(parsed)
@@ -221,6 +311,7 @@ class ZohoMailAdapter:
         )
 
         return {
+            "use_case": "sales_lead",
             "lead_id": lead.lead_id,
             "run_id": result.get("run_id"),
             "state": result.get("state"),

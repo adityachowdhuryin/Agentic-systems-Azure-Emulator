@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.band_a.orchestrator import BandAOrchestrator
 from app.config import settings
+from app.exceptions import ValidationError
 from app.ingestion.teams_adapter import TeamsAdapter
 from app.repositories.base import LeadRepository
 from app.schemas import IngressPayload, LeadCreate
@@ -100,7 +101,85 @@ class TeamsInboundAdapter:
         *,
         correlation_id: str,
     ) -> dict[str, Any]:
+        from app.ingestion.invoice_case_adapter import (
+            ingest_live_non_invoice,
+            ingest_teams_live_invoice,
+        )
+        from app.ingestion.live_invoice_content import (
+            resolve_live_invoice_from_teams,
+            resolve_non_invoice_from_teams,
+        )
+
         parsed = parse_teams_inbound(raw)
+        live = resolve_live_invoice_from_teams(
+            text=parsed.get("text") or "",
+            activity_id=parsed.get("activity_id") or "",
+        )
+        if live:
+            invoice, document_ref, source_label = live
+            try:
+                result = ingest_teams_live_invoice(
+                    self.db,
+                    live_teams=parsed,
+                    invoice=invoice,
+                    document_ref=document_ref,
+                    invoice_source=source_label,
+                    force_sync=False,
+                )
+            except ValidationError:
+                raise
+            return {
+                "use_case": "invoice_review",
+                "run_id": result.get("run_id"),
+                "state": result.get("state"),
+                "document_ref": result.get("document_ref"),
+                "supplier_id": result.get("supplier_id"),
+                "arrival_source": result.get("arrival_source"),
+                "correlation_id": result.get("correlation_id") or correlation_id,
+                "duplicate": result.get("duplicate", False),
+                "rejected": result.get("rejected", False),
+                "live_invoice": True,
+                "parsed_teams": parsed,
+            }
+
+        # Unrelated Teams text → invoice_review non_invoice (Band B exception finding)
+        document, document_ref, source_label = resolve_non_invoice_from_teams(
+            text=parsed.get("text") or "",
+            activity_id=parsed.get("activity_id") or "",
+        )
+        try:
+            result = ingest_live_non_invoice(
+                self.db,
+                document=document,
+                document_ref=document_ref,
+                invoice_source=source_label,
+                arrival_source="teams",
+                force_sync=False,
+                live_teams=parsed,
+            )
+        except ValidationError:
+            raise
+        return {
+            "use_case": "invoice_review",
+            "run_id": result.get("run_id"),
+            "state": result.get("state"),
+            "document_ref": result.get("document_ref"),
+            "supplier_id": result.get("supplier_id"),
+            "arrival_source": result.get("arrival_source"),
+            "correlation_id": result.get("correlation_id") or correlation_id,
+            "duplicate": result.get("duplicate", False),
+            "rejected": result.get("rejected", False),
+            "inbound_kind": "non_invoice",
+            "parsed_teams": parsed,
+        }
+
+    def _process_sales_lead(
+        self,
+        parsed: dict[str, str],
+        *,
+        raw: dict[str, Any],
+        correlation_id: str,
+    ) -> dict[str, Any]:
         extra = _teams_fields(parsed)
         if _str(raw.get("demo_origin")):
             extra["demo_origin"] = _str(raw.get("demo_origin"))
@@ -130,6 +209,7 @@ class TeamsInboundAdapter:
                 event_id=event_id,
             )
             return {
+                "use_case": "sales_lead",
                 "lead_id": existing.lead_id,
                 "run_id": result.get("run_id"),
                 "state": result.get("state"),
@@ -161,6 +241,7 @@ class TeamsInboundAdapter:
             force_sync=True,
         )
         return {
+            "use_case": "sales_lead",
             "lead_id": lead.lead_id,
             "run_id": result.get("run_id"),
             "state": result.get("state"),

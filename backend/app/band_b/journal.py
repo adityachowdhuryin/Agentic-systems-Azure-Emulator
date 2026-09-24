@@ -56,6 +56,7 @@ def save_finding(
     reasoning: str,
     uncertainties: list,
     raw_text: str,
+    policy_choice_reason: str | None = None,
 ) -> Finding:
     existing = db.query(Finding).filter(Finding.run_id == run_id).first()
     if existing:
@@ -69,6 +70,7 @@ def save_finding(
     finding.reasoning = reasoning
     finding.uncertainties_json = json.dumps(uncertainties)
     finding.raw_text = raw_text
+    finding.policy_choice_reason = policy_choice_reason or ""
     db.flush()
     return finding
 
@@ -98,6 +100,7 @@ def replay_run(db: Session, run_id: str) -> dict:
             "verdict": finding.verdict,
             "checks": json.loads(finding.checks_json or "[]"),
             "policy_ids": json.loads(finding.policy_ids_json or "[]"),
+            "policy_choice_reason": finding.policy_choice_reason or "",
             "reasoning": finding.reasoning,
             "uncertainties": json.loads(finding.uncertainties_json or "[]"),
             "raw_text": finding.raw_text,

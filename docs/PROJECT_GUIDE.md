@@ -237,9 +237,9 @@ When **Worker ON**, the mock Band B consumer drains the queue and marks runs **`
 |---|---|---|---|
 | Zoho simulator create | `zoho_adapter.py` | `POST /api/v1/simulators/zoho/leads` | Async |
 | Zoho simulator webhook | `zoho_adapter.py` | `POST /api/v1/simulators/zoho/webhook` | Async |
-| Zoho Mail (real) | `zoho_mail_adapter.py` | `POST /api/v1/webhooks/zoho-mail` | **Async** |
+| Zoho Mail (real) | `zoho_mail_adapter.py` | `POST /api/v1/webhooks/zoho-mail` | Live invoice **sync Band B**; else sales lead |
 | Teams simulator | `teams_adapter.py` | `POST /api/v1/simulators/teams/request` | Async unless `force_sync` |
-| Teams bot (real) | `teams_inbound_adapter.py` | `POST /api/v1/webhooks/teams` | **Sync** |
+| Teams bot (real) | `teams_inbound_adapter.py` | `POST /api/v1/webhooks/teams` | Sales lead **sync**; CASE invoice **async admit + background Band B** |
 | Sample player | `sample_ingress.py` | `POST /api/v1/scheduler/ingest` · timer | Teams **sync** + Zoho **async** |
 | Admission demos (Scheduler) | `admission_demos.py` | `POST /api/v1/scheduler/demos/{scenario}` | Varies by scenario (orchestrator) |
 
@@ -264,12 +264,19 @@ Sample ingest stamps `demo_origin=sample_player` (plus `channel_id=sample-ingres
 ```text
 Email to monitored inbox
   → Zoho Mail filter + Deluge script
-  → HTTPS POST to ngrok …/webhook
+  → HTTPS POST to ngrok …/webhook  (from/to/subject/content + attachments[])
   → Desktop webhook/server.js (port 8080)
   → Band A POST /api/v1/webhooks/zoho-mail  (header X-Mail-Bridge-Key)
-  → create lead + async Band A run
-  → Dashboard shows run + Received Email panel
+  → IF .json/.txt attachment or body parses as pack-shaped invoice:
+        store data/invoice_uploads/{document_ref}.json
+        invoice_review → sync Band B (extract + ERP/policy mocks) · door zoho
+     ELSE:
+        store non_invoice payload (sentinel SUP-1001)
+        invoice_review → sync Band B → finding exception:not_an_invoice · door zoho
+  → Dashboard: Invoice Review (zoho door) + Received Email
 ```
+
+**Live invoice contract:** attach pack `.json`/`.txt` (Deluge Script B downloads via Mail API) **or** paste pack JSON in the body. Must include `supplier_id`. No local `CASE-XX` mapping. Unrelated live mail is not a Sales Lead — use the dashboard Zoho simulator for that. See [docs/zoho_deluge_live_invoice.md](zoho_deluge_live_invoice.md).
 
 **Required for live mail:** backend **and** webhook bridge **and** `ngrok http 8080` must all be running. Zoho cannot reach `127.0.0.1`. Free ngrok hostnames change on restart — update the Deluge invoke URL to `https://<ngrok-host>/webhook` each time (or use a reserved domain).
 
@@ -283,7 +290,7 @@ If mail never appears in the app, check the webhook terminal for `ZOHO MAIL WEBH
 
 **Important:** ngrok must target **8080** (bridge), not 8000 (API).
 
-Bridge already handles common Deluge pitfalls (multipart labeled as JSON, form-urlencoded, Map `.toString()` payloads).
+Bridge already handles common Deluge pitfalls (multipart labeled as JSON, form-urlencoded, Map `.toString()` payloads) and forwards `attachments[]` for live extract.
 
 Configure `MAIL_MONITOR_ADDRESS` and `MAIL_TENANT_ID` (default `company-a`).
 
@@ -294,16 +301,27 @@ Configure `MAIL_MONITOR_ADDRESS` and `MAIL_TENANT_ID` (default `company-a`).
 Personal Gmail Teams **cannot** host a custom bot. Use a **work Microsoft 365** tenant + Azure.
 
 ```text
-User messages Band A Sales Bot in Teams
+User messages Band A Sales Bot in Teams (1:1 preferred for invoice demo)
   → Azure Bot Service
   → POST https://<ngrok>/api/messages
   → webhook/teamsBot.js (Bot Framework)
   → Band A POST /api/v1/webhooks/teams  (header X-Teams-Bridge-Key)
-  → sync Band A run (HANDED_OFF)
-  → bot replies, e.g. "Received. Run RUN-… created (HANDED_OFF)."
-     (duplicate / active-run paths get a clear reject or “already processed” reply)
-  → Dashboard shows run + Received Message (Teams) panel
+
+  IF text parses as pack-shaped invoice JSON (prose + JSON OK):
+        store data/invoice_uploads/{document_ref}.json
+        invoice_review · door teams
+        → Band A returns run_id quickly (queued/dispatched)
+        → BackgroundTasks runs Band B (Foundry)
+        → bot acks run, polls finding, second message with verdict
+  ELSE:
+        invoice_review non_invoice · door teams (sentinel SUP-1001)
+        → BackgroundTasks Band B → exception:not_an_invoice
+        → (No live CASE-XX pack map; Play CASE in the UI. Sales Lead: dashboard simulator)
 ```
+
+**Live Teams invoice contract:** paste pack JSON in the chat (must include `supplier_id`). Same parse rules as Zoho body. `CASE-XX` alone is treated as non-invoice — use the dashboard CASE player for pack fixtures.
+
+**Required for live Teams:** backend **and** webhook bridge **and** `ngrok http 8080` must all be running. Free ngrok hostnames change on restart — update the Azure Bot messaging endpoint to `https://<ngrok-host>/api/messages` each time. Confirm: http://127.0.0.1:8080/health · http://127.0.0.1:8000/api/v1/webhooks/teams/health · ngrok inspector http://127.0.0.1:4040.
 
 ### Ingestion logs (Adaptive Card)
 
@@ -356,7 +374,7 @@ Never commit `.env`.
 | Zoho simulator / Zoho Mail | **Async** | Queue handoff to Band B |
 | Teams simulator (default) | **Async** | Same |
 | Teams simulator + Force sync | **Sync** | In-process demo |
-| **Real Teams bot** | **Sync** | Chat UX — no queue backlog |
+| **Real Teams bot** | Sales lead **sync**; CASE invoice **async + bg Band B** | Chat UX — invoice avoids Bot Framework timeout |
 | Sample player Teams samples | **Sync** | Same adapters as live Teams |
 | Sample player Zoho samples | **Async** | Same adapters as live Zoho Mail |
 
@@ -697,8 +715,8 @@ Preferred path: **live Zoho + Teams** (if bridges + ngrok ready) **and** Schedul
 
 | # | Scenario | Steps | Expect |
 |---|---|---|---|
-| 1 | Live Zoho Mail (optional) | Mail to monitor address (ngrok + Deluge URL current) | live run + email panel |
-| 2 | Live Teams (optional) | Message Band A Sales Bot | sync run + Teams panel |
+| 1 | Live Zoho Mail (optional) | Attach/paste pack invoice JSON or free-text sales mail | invoice `door:zoho` + finding, or sales lead |
+| 2 | Live Teams (optional) | Paste pack invoice JSON in bot chat, or free text | invoice `door:teams` + verdict follow-up (JSON) or `exception:not_an_invoice` |
 | 3 | Sample ingress | Scheduler → happy path catalog → Ingest / Start timer | Teams sync + Zoho async runs |
 | 4a | Invalid auth | Scheduler → Admission failure demos → Invalid auth | rejected, no run |
 | 4b | Tenant mismatch | Scheduler → Admission failure demos → Tenant mismatch | rejected, no run |

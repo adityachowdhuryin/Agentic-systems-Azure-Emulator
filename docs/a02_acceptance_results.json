@@ -1,88 +1,1219 @@
 {
-  "summary": "Local A02 acceptance evidence (Foundry gpt-5 until gpt-4o-mini deploy rights).",
-  "mocks_port": 8090,
-  "model": "gpt-5",
-  "unit_tests": "backend/tests/test_band_b_acceptance.py — 6 passed (T2,T3,T4 fields,T5,T6,T7,T8 structural)",
-  "live_runs": {
-    "CASE-02": {
-      "run_id": "RUN-2026-000028",
-      "note": "T4 wall-clock stop: exception:budget_time after 9 turns @ 120s (pre-bump)"
-    },
-    "CASE-03": {
-      "run_id": "RUN-2026-000030",
-      "verdict": "exception:price-variance-out-of-tolerance",
-      "tools": [
-        "extract_invoice",
-        "get_purchase_order",
-        "get_goods_receipt",
-        "get_vendor",
-        "get_ap_history",
-        "search_policy",
-        "get_policy"
-      ],
-      "arrival_source": "case_email"
-    },
-    "CASE-05": {
-      "run_id": "RUN-2026-000031",
-      "verdict": "clean",
-      "tools": [
-        "extract_invoice",
-        "get_vendor",
-        "get_purchase_order",
-        "get_goods_receipt",
-        "get_ap_history",
-        "search_policy",
-        "get_policy"
-      ],
-      "uncertainties": [
-        "Extractor reported low confidence on total_amount, though recomputation confirms AUD 256.00."
-      ]
-    },
-    "chat_CASE-03": {
-      "run_id": "RUN-2026-000032",
-      "arrival_source": "chat"
-    }
-  },
   "tests": {
-    "T1": {
-      "pass": true,
-      "evidence": "CASE-03 tool order starts extract→PO→GR; CASE-05 starts extract→vendor→PO — both produced coherent findings"
-    },
     "T2": {
       "pass": true,
-      "evidence": "registry.assert_registered raises for check_variance; connectors have no unregistered path"
-    },
-    "T3": {
-      "pass": true,
-      "evidence": "journal_turns rows with saw/decided/tool/result for each run"
-    },
-    "T4": {
-      "pass": true,
-      "evidence": "CASE-02 hit stop:time_budget; agent_loop also stops on turns and money independently"
-    },
-    "T5": {
-      "pass": true,
-      "evidence": "mint_credential(..., intent_recorded=False) raises; journal records intent before connector call"
+      "evidence": "Unregistered tool cannot be invoked: check_variance"
     },
     "T6": {
       "pass": true,
-      "evidence": "build_turn_messages rebuilds each turn; arrival_source never in model context"
+      "evidence": {
+        "has_arrival_source": false
+      }
     },
-    "T7": {
+    "T5": {
       "pass": true,
-      "evidence": "policy_gate.py blocks cross-supplier get_vendor and POL-BLOCK-DEMO independently of prompt"
+      "evidence": {
+        "refused_without_intent": true,
+        "token_prefix": "b1.extract.RUN-HARNESS-T5.1790056489.9f0"
+      }
     },
-    "T8": {
+    "T4": {
       "pass": true,
-      "evidence": "GET /api/v1/invoice/runs/{id}/replay → model_calls=0, cost_cents=0"
+      "evidence": {
+        "pytest_returncode": 0,
+        "stdout": "ey_budget\ntests/test_band_b_acceptance.py::test_t4_stop_time_budget\n  /Users/adityachowdhury/Desktop/Azure Emulator/backend/app/repositories/base.py:58: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    lead.updated_at = datetime.utcnow()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n3 passed, 27 warnings in 0.09s\n",
+        "stderr": "synchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: \"function\", \"class\", \"module\", \"package\", \"session\"\n\n  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))\n"
+      }
     },
     "T9": {
       "pass": true,
-      "evidence": "CASE-03 email arrival_source=case_email; chat CASE-03 arrival_source=chat; same run_invoice_agent"
+      "evidence": {
+        "email_run": "RUN-2026-000030",
+        "chat_run": "RUN-2026-000031",
+        "document_ref": "CASE-01_INV-01431",
+        "email_arrival": "case_email",
+        "chat_arrival": "chat"
+      }
+    },
+    "T1": {
+      "pass": true,
+      "evidence": {
+        "order_CASE-01": [
+      "extract_invoice",
+      "get_purchase_order",
+      "get_goods_receipt",
+      "get_vendor",
+      "get_ap_history",
+      "search_policy",
+      "get_policy",
+          "extract_invoice"
+        ],
+        "order_CASE-04": [
+          "extract_invoice",
+          "get_purchase_order",
+          "get_goods_receipt",
+          "get_vendor",
+          "get_ap_history",
+          "search_policy",
+      "get_policy",
+      "extract_invoice",
+      "get_purchase_order",
+      "get_goods_receipt",
+      "get_vendor"
+        ]
+      }
+    },
+    "T3": {
+      "pass": true,
+      "evidence": {
+        "turn_count": 9
+      }
+    },
+    "T8": {
+      "pass": true,
+      "evidence": {
+        "model_calls": 0,
+        "cost_cents": 0
+      }
+    },
+    "T7": {
+      "pass": true,
+      "evidence": {
+        "blocks_in_journal": 1,
+        "demo_reason": "Policy gate blocked get_vendor: supplier SUP-DEMO-OUT-OF-SCOPE outside run scope SUP-1001"
+      }
     },
     "T10": {
       "pass": true,
-      "evidence": "CASE-05 finding.uncertainties cites low-confidence total_amount and cross-check"
+      "evidence": {
+        "uncertainties": [
+          "Extractor reported low confidence (0.572) for total_amount; this was cross-checked by arithmetic against extracted line data and resolved (80 * 3.2 = 256.0).",
+          "The invoice extraction did not explicitly include a unit_of_measure for the invoice line; PO unit_of_measure is 'each'. Units appear consistent by item code but invoice UOM was not present in extraction output."
+        ],
+        "verdict": "clean"
+      }
     }
-  }
+  },
+  "runs": {
+    "email_CASE-01": {
+      "run_id": "RUN-2026-000030",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-62BC07420FA2",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-01_INV-01431",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review",
+      "arrival_source": "case_email"
+    },
+    "chat_CASE-01": {
+      "run_id": "RUN-2026-000031",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-D5B7D7F8DD0A",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-01_INV-01431",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review",
+      "arrival_source": "chat"
+    },
+    "finding_email": {
+      "run_id": "RUN-2026-000030",
+      "use_case": "invoice_review",
+      "document_ref": "CASE-01_INV-01431",
+      "supplier_id": "SUP-1001",
+      "arrival_source": "case_email",
+      "dispatch_route": "sync",
+      "verdict": "clean",
+      "checks": [
+        {
+          "what": "Invoice extraction",
+          "result": "INV-01431 extracted for SUP-1001 (Meridian Fasteners). Invoice date 2026-08-28, PO reference PO-2026-4001, total AUD 420.00. Field confidence scores all >= 0.963."
+        },
+        {
+          "what": "Supplier status",
+          "result": "Supplier SUP-1001 is active, commercial agreement 'standard', payment terms NET30 (agreement valid 2025-07-01 to 2027-06-30)."
+        },
+        {
+          "what": "PO reference and goods receipt linkage",
+          "result": "Invoice PO reference PO-2026-4001 matches goods receipt GRN-2026-4001 (supplier SUP-1001, received_on 2026-08-02)."
+        },
+        {
+          "what": "Quantity three-way match",
+          "result": "Invoice line quantity 1000 matches goods receipt quantity_received 1000. Per policy POL-AP-004 quantity is assessed against the goods receipt -> no quantity variance."
+        },
+        {
+          "what": "Price / amount math",
+          "result": "Unit price 0.42 * quantity 1000 = 420.00 equals line_total and invoice total. No arithmetic discrepancy."
+        },
+        {
+          "what": "AP history / duplicate check",
+          "result": "AP history contains prior invoices for SUP-1001 but none referencing PO-2026-4001. No duplicate invoice number found."
+        },
+        {
+          "what": "Policy check",
+          "result": "Applied POL-AP-004 (Quantity Variance and Delivery Discrepancies): invoice passes quantity and GRN checks; no further escalation under this policy."
+        }
+      ],
+      "policy_ids": [
+        "POL-AP-004"
+      ],
+      "policy_choice_reason": "POL-AP-004 explicitly governs three-way matching and quantity assessment against the goods receipt, which is the core validation required for this invoice. Although price-tolerance policy may also be relevant, the primary potential variance here is quantity and the GRN directly addresses that.",
+      "reasoning": "The invoice (INV-01431) references PO-2026-4001 and the GRN (GRN-2026-4001) confirms receipt of 1000 units; the invoice quantity and amount mathematically match the GRN and invoice totals. Supplier is active and there is no AP-history conflict, so the invoice is acceptable for processing under the Quantity Variance policy.",
+    "uncertainties": [
+        "PO master record (ordered unit price / ordered quantity) was not retrieved; price was not cross-checked against the original PO (only validated against arithmetic and GRN).",
+        "Confirm whether the PO remains open for any balance (not indicated by current data) if further PO-level accounting treatment is required."
+    ],
+      "raw_text": "Analyst write-up:\n\nInvoice INV-01431 from Meridian Fasteners (SUP-1001) for AUD 420.00 references PO-2026-4001. Extraction confidence is high for all fields. GRN-2026-4001 confirms 1000 units received on 2026-08-02, which matches the invoice line (1000 units at AUD 0.42 each). Arithmetic checks out (0.42 * 1000 = 420.00). Supplier is active and AP history shows prior paid invoices but none against this PO. Under POL-AP-004 (Quantity Variance and Delivery Discrepancies), quantity is assessed against the goods receipt and no variance exists; therefore no escalation is required. Recommendation: approve for payment. Optional: fetch the PO master to confirm ordered unit price and PO open/closed status if your control requires explicit PO price verification before payment.",
+    "budget": {
+      "turns": 20,
+        "turns_used": 5,
+      "usd_cents": 100,
+        "usd_spent_cents": 5,
+      "seconds": 300
+    }
+  },
+    "finding_chat": {
+    "run_id": "RUN-2026-000031",
+      "use_case": "invoice_review",
+      "document_ref": "CASE-01_INV-01431",
+      "supplier_id": "SUP-1001",
+      "arrival_source": "chat",
+      "dispatch_route": "sync",
+    "verdict": "clean",
+      "checks": [
+        {
+          "what": "Invoice extraction",
+          "result": "Invoice INV-01431 extracted for SUP-1001 (Meridian Fasteners Pty Ltd), invoice_date 2026-08-28, currency AUD, total 420.00; all extracted field_confidence values >= 0.90 (lowest 0.963 for unit_price)."
+        },
+        {
+          "what": "Purchase order match",
+          "result": "PO-2026-4001 exists for SUP-1001 with one line (BOLT-M8-50) ordered 1000 @ 0.42 AUD, line total 420.00 \u2014 matches invoice unit price, quantity and total."
+        },
+        {
+          "what": "Goods receipt (3rd leg)",
+          "result": "GRN-2026-4001 received on 2026-08-02 shows quantity_received 1000 for PO-2026-4001 \u2014 quantity received matches PO and invoice."
+        },
+        {
+          "what": "Three-way match (price / quantity / receipt)",
+          "result": "Quantity, unit price and invoice total exactly match the PO and goods receipt. No variance detected."
+        },
+        {
+          "what": "Policy check \u2014 price tolerance (POL-AP-001)",
+          "result": "Invoice price variance = 0% vs PO unit price; within standard tolerance (<=5%). Policy applies and no escalation required."
+        },
+        {
+          "what": "AP history review",
+          "result": "Supplier SUP-1001 has recent paid invoices (INV-01417, INV-01388, INV-01402) with normal payment activity \u2014 no red flags in AP history returned."
+        }
+      ],
+      "policy_ids": [
+        "POL-AP-001"
+      ],
+      "policy_choice_reason": "POL-AP-001 (Invoice Price Tolerance) directly governs acceptance/escalation where invoice unit price differs from the PO; here price equality means this policy is the relevant control. Other policies (e.g., quantity variance) were lower-priority given exact match.",
+      "reasoning": "PO, invoice and goods receipt all match on item, quantity and unit price, and the invoice variance is 0% which is within the AP price tolerance policy. No exceptions or escalations are required based on the data provided.",
+    "uncertainties": [
+        "Vendor master record (hold status or any overriding commercial agreement) was not queried \u2014 POL-AP-001 exclusions (supplier on hold or a more specific commercial agreement) have not been validated.",
+        "Although extractor confidences are all >= 0.90, the unit_price confidence (0.963) is lower than other fields; extraction appears reliable but could be rechecked against the scanned image if desired."
+    ],
+      "raw_text": "Analyst write-up: Invoice INV-01431 from Meridian Fasteners (SUP-1001) for 420.00 AUD references PO-2026-4001. Extracted invoice shows 1 line: BOLT-M8-50, 1000 units @ 0.42 each = 420.00. PO-2026-4001 confirms 1000 units at 0.42 each. GRN-2026-4001 shows 1000 units received on 2026-08-02. Three-way match (invoice-PO-GRN) is exact for quantity and unit price, resulting in 0% variance. Under POL-AP-001 (Invoice Price Tolerance) this invoice requires no escalation. Recommendation: process for payment. Note: confirm vendor master hold/agreement status if processes require explicit vendor-status validation before payment.",
+    "budget": {
+      "turns": 20,
+      "turns_used": 7,
+      "usd_cents": 100,
+      "usd_spent_cents": 7,
+      "seconds": 300
+    }
+  },
+    "email_CASE-04": {
+      "run_id": "RUN-2026-000032",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-A73D8C7C2A7D",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-04_INV-04766",
+      "supplier_id": "SUP-1002",
+      "use_case": "invoice_review",
+      "arrival_source": "case_email"
+    },
+    "finding_CASE-04": {
+      "run_id": "RUN-2026-000032",
+      "use_case": "invoice_review",
+      "document_ref": "CASE-04_INV-04766",
+      "supplier_id": "SUP-1002",
+      "arrival_source": "case_email",
+      "dispatch_route": "sync",
+      "verdict": "exception:price_variance",
+      "checks": [
+        {
+          "what": "Invoice extraction from document_ref",
+          "result": "Extracted invoice INV-04766 for supplier SUP-1002 (Caldera Components Ltd). Key extracted fields: PO PO-2026-4004, invoice total AUD 6,240.00, line: BRKT-SS-12 qty 800 unit_price 7.80. Invoice_date extraction confidence low (0.569)."
+        },
+        {
+          "what": "Purchase Order match",
+          "result": "PO-2026-4004 found for SUP-1002. PO line: BRKT-SS-12 qty ordered 800 unit_price 7.50 line_total AUD 6,000.00. PO currency AUD; status open."
+        },
+        {
+          "what": "Goods receipt (three-way match) \u2014 quantity",
+          "result": "GRN-2026-4004 shows 800 units received on 2026-08-02 matching PO quantity (800). Quantity matches; no quantity exception."
+        },
+        {
+          "what": "Price variance check (per-line and aggregate) vs PO",
+          "result": "Invoice unit price 7.80 vs PO unit price 7.50 = +0.30 = 4.00% increase. Line variance absolute = AUD 240 (invoice line 6,240 vs PO line 6,000). Aggregate invoice variance = 4.00% (single-line invoice)."
+        },
+        {
+          "what": "Applicable policy and negotiated supplier terms",
+          "result": "POL-AP-001 (Invoice Price Tolerance) applies to invoice price variances. Vendor record indicates an active negotiated commercial agreement (valid 2025-07-01 to 2027-06-30) with negotiated_price_tolerance_pct = 2.0%, which overrides the standard tolerance per POL-AP-001."
+        },
+        {
+          "what": "Tolerance assessment and decision",
+          "result": "Invoice variance (4.00%) exceeds the supplier-specific negotiated tolerance (2.00%). Therefore escalation is required per policy; payment should not be auto-accepted under tolerance rules."
+        },
+        {
+          "what": "Vendor status and agreement validity",
+          "result": "Supplier SUP-1002 is active and commercial agreement is in force (valid through 2027-06-30), so the negotiated tolerance applies."
+        }
+      ],
+      "policy_ids": [
+        "POL-AP-001"
+      ],
+      "policy_choice_reason": "POL-AP-001 was chosen because the sole discrepancy is a unit price variance and that policy governs price tolerances. POL-AP-004 (Quantity Variance) was not selected because quantities received match the PO exactly; POL-AP-002 is relevant only insofar as it explains that negotiated supplier terms override the standard tolerance, which is captured in the vendor master and applied here.",
+      "reasoning": "The invoice matches the PO and GRN on quantity, but the invoiced unit price (7.80) is 4% above the PO price (7.50). The supplier has a negotiated price tolerance of 2%, which is lower than the observed 4% variance, so the invoice falls outside allowed tolerance and requires escalation.",
+      "uncertainties": [
+        "Invoice date extraction confidence is low (0.569); confirm invoice date if relevant for payment-term or dispute timing.",
+        "Extraction note flagged only invoice_date below 0.90; other extracted numeric fields have high confidence but should be visually confirmed before final payment action."
+      ],
+      "raw_text": "Analyst write-up:\nInvoice INV-04766 (Caldera Components Ltd, SUP-1002) references PO-2026-4004 and a single line BRKT-SS-12 for 800 units. PO unit price = AUD 7.50 (line total AUD 6,000); invoice unit price = AUD 7.80 (line total AUD 6,240). GRN-2026-4004 confirms 800 units received, so quantity reconciles. The invoiced unit price is 4.00% above the PO price, producing an invoice-to-PO line variance of AUD 240. Per POL-AP-001, standard tolerance is 5%, but the supplier's negotiated agreement (valid) sets a 2% price tolerance which takes precedence. Because the 4% variance exceeds the supplier-specific 2% tolerance, this invoice is outside allowed tolerance and should be escalated to Procurement/Commercial for approval or supplier clarification before payment. Also note the invoice date was extracted with low confidence\u2014confirm visually. Recommended next steps: (1) Hold payment pending escalation; (2) notify Procurement/Commercial with variance details (PO, GRN, invoice amounts); (3) request supplier credit or revised invoice if overcharge cannot be justified.",
+      "budget": {
+        "turns": 20,
+        "turns_used": 8,
+        "usd_cents": 100,
+        "usd_spent_cents": 8,
+        "seconds": 300
+      }
+    },
+    "journal_CASE-01": {
+      "run_id": "RUN-2026-000030",
+      "turns": [
+        {
+          "turn_no": 1,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 0
+          },
+          "decided": "call:extract_invoice",
+          "tool_name": "extract_invoice",
+          "tool_args": {
+            "document_ref": "CASE-01_INV-01431"
+          },
+          "tool_result": {
+            "document_ref": "CASE-01_INV-01431",
+            "extracted": {
+              "invoice_number": "INV-01431",
+              "supplier_id": "SUP-1001",
+              "supplier_name": "Meridian Fasteners Pty Ltd",
+              "invoice_date": "2026-08-28",
+              "currency": "AUD",
+              "po_reference": "PO-2026-4001",
+              "lines": [
+                {
+                  "line_no": 1,
+                  "item_code": "BOLT-M8-50",
+                  "quantity": 1000,
+                  "unit_price": 0.42,
+                  "line_total": 420.0
+                }
+              ],
+              "total_amount": 420.0
+            },
+            "field_confidence": {
+              "invoice_number": 0.983,
+              "supplier_id": 0.992,
+              "invoice_date": 0.978,
+              "po_reference": 0.986,
+              "total_amount": 1.0,
+              "line_1.item_code": 0.994,
+              "line_1.quantity": 0.99,
+              "line_1.unit_price": 0.963
+            },
+            "note": "Confidence below 0.90 means the extractor is unsure of that field. It may still be correct. Deciding what to do about it is your problem.",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.extract.RUN-2026-0000"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 2,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_purchase_order",
+          "tool_name": "get_purchase_order",
+          "tool_args": {
+            "po_number": "PO-2026-4001"
+          },
+          "tool_result": {
+            "po_number": "PO-2026-4001",
+            "supplier_id": "SUP-1001",
+            "status": "open",
+            "raised_on": "2026-07-14",
+            "currency": "AUD",
+            "lines": [
+              {
+                "line_no": 1,
+                "item_code": "BOLT-M8-50",
+                "description": "Hex bolt M8x50",
+                "quantity_ordered": 1000,
+                "unit_price": 0.42,
+                "unit_of_measure": "each",
+                "line_total": 420.0
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000030.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 3,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_goods_receipt",
+          "tool_name": "get_goods_receipt",
+          "tool_args": {
+            "po_number": "PO-2026-4001"
+          },
+          "tool_result": {
+            "receipts": [
+              {
+                "grn_number": "GRN-2026-4001",
+                "po_number": "PO-2026-4001",
+                "supplier_id": "SUP-1001",
+                "received_on": "2026-08-02",
+                "lines": [
+                  {
+                    "line_no": 1,
+                    "item_code": "BOLT-M8-50",
+                    "quantity_received": 1000
+                  }
+                ]
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000030.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 4,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_vendor",
+          "tool_name": "get_vendor",
+          "tool_args": {
+            "supplier_id": "SUP-1001"
+          },
+          "tool_result": {
+            "supplier_id": "SUP-1001",
+            "legal_name": "Meridian Fasteners Pty Ltd",
+            "remittance_email": "ap@meridianfasteners.example",
+            "status": "active",
+            "commercial_agreement": "standard",
+            "payment_terms": "NET30",
+            "primary_category": "Consumables",
+            "agreement_valid_from": "2025-07-01",
+            "agreement_valid_to": "2027-06-30",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000030.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 5,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_ap_history",
+          "tool_name": "get_ap_history",
+          "tool_args": {
+            "supplier_id": "SUP-1001"
+          },
+          "tool_result": {
+            "supplier_id": "SUP-1001",
+            "invoices": [
+              {
+                "invoice_number": "INV-01417",
+                "invoice_date": "2026-08-07",
+                "total_amount": 420.0,
+                "po_reference": "PO-2026-4009",
+                "status": "paid",
+                "paid_on": "2026-09-01"
+              },
+              {
+                "invoice_number": "INV-01388",
+                "invoice_date": "2026-07-19",
+                "total_amount": 388.4,
+                "po_reference": "PO-2026-3981",
+                "status": "paid",
+                "paid_on": "2026-08-14"
+              },
+              {
+                "invoice_number": "INV-01402",
+                "invoice_date": "2026-07-28",
+                "total_amount": 256.0,
+                "po_reference": "PO-2026-3994",
+                "status": "paid",
+                "paid_on": "2026-08-22",
+                "note": "partial invoice against PO-2026-3994; balance invoiced on INV-01430"
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000030.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 6,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 1
+          },
+          "decided": "call:search_policy",
+          "tool_name": "search_policy",
+          "tool_args": {
+            "query": "three-way match invoice PO goods receipt price quantity tolerance invoice approval policy"
+          },
+          "tool_result": {
+            "query": "three-way match invoice PO goods receipt price quantity tolerance invoice approval policy",
+            "results": [
+              {
+                "policy_id": "POL-AP-004",
+                "title": "Quantity Variance and Delivery Discrepancies",
+                "score": 53
+              },
+              {
+                "policy_id": "POL-AP-001",
+                "title": "Invoice Price Tolerance",
+                "score": 48
+              },
+              {
+                "policy_id": "POL-AP-002",
+                "title": "Negotiated Commercial Agreements \u2014 Price Discipline",
+                "score": 16
+              },
+              {
+                "policy_id": "POL-AP-003",
+                "title": "Purchases Without a Purchase Order",
+                "score": 14
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.policy.RUN-2026-00003"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 7,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 6
+          },
+          "decided": "call:get_policy",
+          "tool_name": "get_policy",
+          "tool_args": {
+            "policy_id": "POL-AP-004"
+          },
+          "tool_result": {
+            "policy_id": "POL-AP-004",
+            "title": "Quantity Variance and Delivery Discrepancies",
+            "text": "---\npolicy_id: POL-AP-004\ntitle: Quantity Variance and Delivery Discrepancies\nowner: Group Financial Controller\neffective_from: 2025-04-01\napplies_to: Supplier invoices matched to a purchase order and goods receipt\n---\n\n# Quantity Variance and Delivery Discrepancies\n\n## Three-way match\n\nInvoices raised against a purchase order are matched on three documents: the purchase\norder, the goods receipt note, and the invoice. Quantity is assessed **against the goods\nreceipt**, not against the purchase order.\n\n## Under-delivery\n\nWhere the invoiced quantity is lower than the quantity ordered, and the goods receipt\nconfirms that the lower quantity was received, the invoice is correct as presented and\nrepresents either:\n\n- a **short delivery**, where the balance is not expected; or\n- a **partial invoice**, where the balance remains outstanding on the purchase order and\n  will be invoiced separately.\n\nThe two are distinguished by whether the purchase order remains open for the balance and\nwhether the supplier has previously invoiced partially against the same order. Accounts\nPayable should establish which applies before processing, as the treatment of the\npurchase order differs.\n\n## Over-delivery\n\nWhere the invoiced quantity exceeds the quantity ordered:\n\n- if the goods receipt confirms the higher quantity was received and accepted, an\n  over-delivery tolerance of ten per cent (10%) of the ordered quantity may be accepted;\n- beyond that, the invoice is referred to the raising cost centre.\n\n## Units of measure\n\nQuantity and price must be assessed on a consistent unit of measure. Where the purchase\norder and the invoice express quantity in different units, the invoice is not to be\ntreated as a variance until the units have been reconciled.\n",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.policy.RUN-2026-00003"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 8,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 7
+          },
+          "decided": "call:extract_invoice",
+          "tool_name": "extract_invoice",
+          "tool_args": {
+            "document_ref": "CASE-01_INV-01431"
+          },
+          "tool_result": {
+            "document_ref": "CASE-01_INV-01431",
+            "extracted": {
+              "invoice_number": "INV-01431",
+              "supplier_id": "SUP-1001",
+              "supplier_name": "Meridian Fasteners Pty Ltd",
+              "invoice_date": "2026-08-28",
+              "currency": "AUD",
+              "po_reference": "PO-2026-4001",
+              "lines": [
+                {
+                  "line_no": 1,
+                  "item_code": "BOLT-M8-50",
+                  "quantity": 1000,
+                  "unit_price": 0.42,
+                  "line_total": 420.0
+                }
+              ],
+              "total_amount": 420.0
+            },
+            "field_confidence": {
+              "invoice_number": 0.983,
+              "supplier_id": 0.992,
+              "invoice_date": 0.978,
+              "po_reference": 0.986,
+              "total_amount": 1.0,
+              "line_1.item_code": 0.994,
+              "line_1.quantity": 0.99,
+              "line_1.unit_price": 0.963
+            },
+            "note": "Confidence below 0.90 means the extractor is unsure of that field. It may still be correct. Deciding what to do about it is your problem.",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.extract.RUN-2026-0000"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 9,
+          "saw": {
+            "document_ref": "CASE-01_INV-01431",
+            "supplier_id": "SUP-1001",
+            "prior_tool_count": 8
+          },
+          "decided": "final_finding",
+          "tool_name": null,
+          "tool_args": {},
+          "tool_result": {
+            "verdict": "clean",
+            "checks": [
+              {
+                "what": "Invoice extraction",
+                "result": "INV-01431 extracted for SUP-1001 (Meridian Fasteners). Invoice date 2026-08-28, PO reference PO-2026-4001, total AUD 420.00. Field confidence scores all >= 0.963."
+              },
+              {
+                "what": "Supplier status",
+                "result": "Supplier SUP-1001 is active, commercial agreement 'standard', payment terms NET30 (agreement valid 2025-07-01 to 2027-06-30)."
+              },
+              {
+                "what": "PO reference and goods receipt linkage",
+                "result": "Invoice PO reference PO-2026-4001 matches goods receipt GRN-2026-4001 (supplier SUP-1001, received_on 2026-08-02)."
+              },
+              {
+                "what": "Quantity three-way match",
+                "result": "Invoice line quantity 1000 matches goods receipt quantity_received 1000. Per policy POL-AP-004 quantity is assessed against the goods receipt -> no quantity variance."
+              },
+              {
+                "what": "Price / amount math",
+                "result": "Unit price 0.42 * quantity 1000 = 420.00 equals line_total and invoice total. No arithmetic discrepancy."
+              },
+              {
+                "what": "AP history / duplicate check",
+                "result": "AP history contains prior invoices for SUP-1001 but none referencing PO-2026-4001. No duplicate invoice number found."
+              },
+              {
+                "what": "Policy check",
+                "result": "Applied POL-AP-004 (Quantity Variance and Delivery Discrepancies): invoice passes quantity and GRN checks; no further escalation under this policy."
+              }
+            ],
+            "policy_ids": [
+              "POL-AP-004"
+            ],
+            "policy_choice_reason": "POL-AP-004 explicitly governs three-way matching and quantity assessment against the goods receipt, which is the core validation required for this invoice. Although price-tolerance policy may also be relevant, the primary potential variance here is quantity and the GRN directly addresses that.",
+            "reasoning": "The invoice (INV-01431) references PO-2026-4001 and the GRN (GRN-2026-4001) confirms receipt of 1000 units; the invoice quantity and amount mathematically match the GRN and invoice totals. Supplier is active and there is no AP-history conflict, so the invoice is acceptable for processing under the Quantity Variance policy.",
+            "uncertainties": [
+              "PO master record (ordered unit price / ordered quantity) was not retrieved; price was not cross-checked against the original PO (only validated against arithmetic and GRN).",
+              "Confirm whether the PO remains open for any balance (not indicated by current data) if further PO-level accounting treatment is required."
+            ],
+            "raw_text": "Analyst write-up:\n\nInvoice INV-01431 from Meridian Fasteners (SUP-1001) for AUD 420.00 references PO-2026-4001. Extraction confidence is high for all fields. GRN-2026-4001 confirms 1000 units received on 2026-08-02, which matches the invoice line (1000 units at AUD 0.42 each). Arithmetic checks out (0.42 * 1000 = 420.00). Supplier is active and AP history shows prior paid invoices but none against this PO. Under POL-AP-004 (Quantity Variance and Delivery Discrepancies), quantity is assessed against the goods receipt and no variance exists; therefore no escalation is required. Recommendation: approve for payment. Optional: fetch the PO master to confirm ordered unit price and PO open/closed status if your control requires explicit PO price verification before payment."
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        }
+      ]
+    },
+    "journal_CASE-04": {
+    "run_id": "RUN-2026-000032",
+      "turns": [
+        {
+          "turn_no": 1,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 0
+          },
+          "decided": "call:extract_invoice",
+          "tool_name": "extract_invoice",
+          "tool_args": {
+            "document_ref": "CASE-04_INV-04766"
+          },
+          "tool_result": {
+            "document_ref": "CASE-04_INV-04766",
+            "extracted": {
+              "invoice_number": "INV-04766",
+              "supplier_id": "SUP-1002",
+              "supplier_name": "Caldera Components Ltd",
+              "invoice_date": "2026-08-28",
+              "currency": "AUD",
+              "po_reference": "PO-2026-4004",
+              "lines": [
+                {
+                  "line_no": 1,
+                  "item_code": "BRKT-SS-12",
+                  "quantity": 800,
+                  "unit_price": 7.8,
+                  "line_total": 6240.0
+                }
+              ],
+              "total_amount": 6240.0
+            },
+            "field_confidence": {
+              "invoice_number": 0.968,
+              "supplier_id": 0.998,
+              "invoice_date": 0.569,
+              "po_reference": 0.96,
+              "total_amount": 0.973,
+              "line_1.item_code": 0.986,
+              "line_1.quantity": 0.946,
+              "line_1.unit_price": 0.998
+            },
+            "note": "Confidence below 0.90 means the extractor is unsure of that field. It may still be correct. Deciding what to do about it is your problem.",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.extract.RUN-2026-0000"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 2,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_purchase_order",
+          "tool_name": "get_purchase_order",
+          "tool_args": {
+            "po_number": "PO-2026-4004"
+          },
+          "tool_result": {
+            "po_number": "PO-2026-4004",
+            "supplier_id": "SUP-1002",
+            "status": "open",
+            "raised_on": "2026-07-14",
+            "currency": "AUD",
+            "lines": [
+              {
+                "line_no": 1,
+                "item_code": "BRKT-SS-12",
+                "description": "Stainless bracket 12mm",
+                "quantity_ordered": 800,
+                "unit_price": 7.5,
+                "unit_of_measure": "each",
+                "line_total": 6000.0
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 3,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_goods_receipt",
+          "tool_name": "get_goods_receipt",
+          "tool_args": {
+            "po_number": "PO-2026-4004"
+          },
+          "tool_result": {
+            "receipts": [
+              {
+                "grn_number": "GRN-2026-4004",
+                "po_number": "PO-2026-4004",
+                "supplier_id": "SUP-1002",
+                "received_on": "2026-08-02",
+                "lines": [
+                  {
+                    "line_no": 1,
+                    "item_code": "BRKT-SS-12",
+                    "quantity_received": 800
+                  }
+                ]
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 4,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_vendor",
+          "tool_name": "get_vendor",
+          "tool_args": {
+            "supplier_id": "SUP-1002"
+          },
+          "tool_result": {
+            "supplier_id": "SUP-1002",
+            "legal_name": "Caldera Components Ltd",
+            "remittance_email": "billing@calderacomponents.example",
+            "status": "active",
+            "commercial_agreement": "negotiated",
+            "payment_terms": "NET45",
+            "primary_category": "Consumables",
+            "agreement_valid_from": "2025-07-01",
+            "agreement_valid_to": "2027-06-30",
+            "negotiated_price_tolerance_pct": 2.0,
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 5,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 1
+          },
+          "decided": "call:get_ap_history",
+          "tool_name": "get_ap_history",
+          "tool_args": {
+            "supplier_id": "SUP-1002"
+          },
+          "tool_result": {
+            "supplier_id": "SUP-1002",
+            "invoices": [
+              {
+                "invoice_number": "CC-77120",
+                "invoice_date": "2026-07-30",
+                "total_amount": 6000.0,
+                "po_reference": "PO-2026-3966",
+                "status": "paid",
+                "paid_on": "2026-09-12"
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 6,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 1
+          },
+          "decided": "call:search_policy",
+          "tool_name": "search_policy",
+          "tool_args": {
+            "query": "three-way match tolerance quantity price goods receipt PO supplier invoicing variance"
+          },
+          "tool_result": {
+            "query": "three-way match tolerance quantity price goods receipt PO supplier invoicing variance",
+            "results": [
+              {
+                "policy_id": "POL-AP-004",
+                "title": "Quantity Variance and Delivery Discrepancies",
+                "score": 33
+              },
+              {
+                "policy_id": "POL-AP-001",
+                "title": "Invoice Price Tolerance",
+                "score": 30
+              },
+              {
+                "policy_id": "POL-AP-002",
+                "title": "Negotiated Commercial Agreements \u2014 Price Discipline",
+                "score": 14
+              },
+              {
+                "policy_id": "POL-AP-003",
+                "title": "Purchases Without a Purchase Order",
+                "score": 2
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.policy.RUN-2026-00003"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 7,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 6
+          },
+          "decided": "call:get_policy",
+          "tool_name": "get_policy",
+          "tool_args": {
+            "policy_id": "POL-AP-001"
+          },
+          "tool_result": {
+            "policy_id": "POL-AP-001",
+            "title": "Invoice Price Tolerance",
+            "text": "---\npolicy_id: POL-AP-001\ntitle: Invoice Price Tolerance\nowner: Group Financial Controller\neffective_from: 2025-04-01\napplies_to: All supplier invoices matched to a purchase order\n---\n\n# Invoice Price Tolerance\n\n## Purpose\n\nTo permit efficient processing of supplier invoices where the invoiced price differs\nimmaterially from the price agreed on the purchase order, without requiring manual\nintervention for every minor variance.\n\n## Standard tolerance\n\nWhere the invoiced unit price exceeds the purchase order unit price, Accounts Payable\nmay accept the invoice without escalation provided the variance does **not exceed five\nper cent (5%)** of the purchase order unit price.\n\nVariances of any size in the supplier's favour to the buyer \u2014 that is, an invoiced price\n*below* the purchase order price \u2014 are accepted without escalation.\n\n## Where the standard tolerance does not apply\n\nThe tolerance in this policy is the organisation's default position. It applies **except\nwhere a more specific commercial arrangement is in force with the supplier**, in which\ncase the terms of that arrangement prevail. See POL-AP-002.\n\nThe standard tolerance does not apply to:\n\n- capital equipment purchases, which are governed by the capital approval framework;\n- suppliers whose account is on hold;\n- suppliers whose commercial agreement has lapsed.\n\n## Cumulative variance\n\nWhere a single invoice contains multiple lines, tolerance is assessed **per line**.\nAn invoice may therefore be partially within tolerance. Where the aggregate variance\nacross the invoice exceeds five per cent of the invoice total, the invoice should be\nescalated in full even where individual lines are within tolerance.\n",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.policy.RUN-2026-00003"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 8,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 7
+          },
+          "decided": "call:extract_invoice",
+          "tool_name": "extract_invoice",
+          "tool_args": {
+            "document_ref": "CASE-04_INV-04766"
+          },
+          "tool_result": {
+            "document_ref": "CASE-04_INV-04766",
+            "extracted": {
+              "invoice_number": "INV-04766",
+              "supplier_id": "SUP-1002",
+              "supplier_name": "Caldera Components Ltd",
+              "invoice_date": "2026-08-28",
+              "currency": "AUD",
+              "po_reference": "PO-2026-4004",
+              "lines": [
+                {
+                  "line_no": 1,
+                  "item_code": "BRKT-SS-12",
+                  "quantity": 800,
+                  "unit_price": 7.8,
+                  "line_total": 6240.0
+                }
+              ],
+              "total_amount": 6240.0
+            },
+            "field_confidence": {
+              "invoice_number": 0.968,
+              "supplier_id": 0.998,
+              "invoice_date": 0.569,
+              "po_reference": 0.96,
+              "total_amount": 0.973,
+              "line_1.item_code": 0.986,
+              "line_1.quantity": 0.946,
+              "line_1.unit_price": 0.998
+            },
+            "note": "Confidence below 0.90 means the extractor is unsure of that field. It may still be correct. Deciding what to do about it is your problem.",
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.extract.RUN-2026-0000"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 9,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 8
+          },
+          "decided": "call:get_purchase_order",
+          "tool_name": "get_purchase_order",
+          "tool_args": {
+            "po_number": "PO-2026-4004"
+          },
+          "tool_result": {
+            "po_number": "PO-2026-4004",
+            "supplier_id": "SUP-1002",
+            "status": "open",
+            "raised_on": "2026-07-14",
+            "currency": "AUD",
+            "lines": [
+              {
+                "line_no": 1,
+                "item_code": "BRKT-SS-12",
+                "description": "Stainless bracket 12mm",
+                "quantity_ordered": 800,
+                "unit_price": 7.5,
+                "unit_of_measure": "each",
+                "line_total": 6000.0
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 10,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 9
+          },
+          "decided": "call:get_goods_receipt",
+          "tool_name": "get_goods_receipt",
+          "tool_args": {
+            "po_number": "PO-2026-4004"
+          },
+          "tool_result": {
+            "receipts": [
+              {
+                "grn_number": "GRN-2026-4004",
+                "po_number": "PO-2026-4004",
+                "supplier_id": "SUP-1002",
+                "received_on": "2026-08-02",
+                "lines": [
+                  {
+                    "line_no": 1,
+                    "item_code": "BRKT-SS-12",
+                    "quantity_received": 800
+                  }
+                ]
+              }
+            ],
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 11,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 10
+          },
+          "decided": "call:get_vendor",
+          "tool_name": "get_vendor",
+          "tool_args": {
+            "supplier_id": "SUP-1002"
+          },
+          "tool_result": {
+            "supplier_id": "SUP-1002",
+            "legal_name": "Caldera Components Ltd",
+            "remittance_email": "billing@calderacomponents.example",
+            "status": "active",
+            "commercial_agreement": "negotiated",
+            "payment_terms": "NET45",
+            "primary_category": "Consumables",
+            "agreement_valid_from": "2025-07-01",
+            "agreement_valid_to": "2027-06-30",
+            "negotiated_price_tolerance_pct": 2.0,
+            "_broker": {
+              "credential_kind": "b1",
+              "token_prefix": "b1.erp.RUN-2026-000032.1"
+            }
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        },
+        {
+          "turn_no": 12,
+          "saw": {
+            "document_ref": "CASE-04_INV-04766",
+            "supplier_id": "SUP-1002",
+            "prior_tool_count": 11
+          },
+          "decided": "final_finding",
+          "tool_name": null,
+          "tool_args": {},
+          "tool_result": {
+            "verdict": "exception:price_variance",
+            "checks": [
+              {
+                "what": "Invoice extraction from document_ref",
+                "result": "Extracted invoice INV-04766 for supplier SUP-1002 (Caldera Components Ltd). Key extracted fields: PO PO-2026-4004, invoice total AUD 6,240.00, line: BRKT-SS-12 qty 800 unit_price 7.80. Invoice_date extraction confidence low (0.569)."
+              },
+              {
+                "what": "Purchase Order match",
+                "result": "PO-2026-4004 found for SUP-1002. PO line: BRKT-SS-12 qty ordered 800 unit_price 7.50 line_total AUD 6,000.00. PO currency AUD; status open."
+              },
+              {
+                "what": "Goods receipt (three-way match) \u2014 quantity",
+                "result": "GRN-2026-4004 shows 800 units received on 2026-08-02 matching PO quantity (800). Quantity matches; no quantity exception."
+              },
+              {
+                "what": "Price variance check (per-line and aggregate) vs PO",
+                "result": "Invoice unit price 7.80 vs PO unit price 7.50 = +0.30 = 4.00% increase. Line variance absolute = AUD 240 (invoice line 6,240 vs PO line 6,000). Aggregate invoice variance = 4.00% (single-line invoice)."
+              },
+              {
+                "what": "Applicable policy and negotiated supplier terms",
+                "result": "POL-AP-001 (Invoice Price Tolerance) applies to invoice price variances. Vendor record indicates an active negotiated commercial agreement (valid 2025-07-01 to 2027-06-30) with negotiated_price_tolerance_pct = 2.0%, which overrides the standard tolerance per POL-AP-001."
+              },
+              {
+                "what": "Tolerance assessment and decision",
+                "result": "Invoice variance (4.00%) exceeds the supplier-specific negotiated tolerance (2.00%). Therefore escalation is required per policy; payment should not be auto-accepted under tolerance rules."
+              },
+              {
+                "what": "Vendor status and agreement validity",
+                "result": "Supplier SUP-1002 is active and commercial agreement is in force (valid through 2027-06-30), so the negotiated tolerance applies."
+              }
+            ],
+            "policy_ids": [
+              "POL-AP-001"
+            ],
+            "policy_choice_reason": "POL-AP-001 was chosen because the sole discrepancy is a unit price variance and that policy governs price tolerances. POL-AP-004 (Quantity Variance) was not selected because quantities received match the PO exactly; POL-AP-002 is relevant only insofar as it explains that negotiated supplier terms override the standard tolerance, which is captured in the vendor master and applied here.",
+            "reasoning": "The invoice matches the PO and GRN on quantity, but the invoiced unit price (7.80) is 4% above the PO price (7.50). The supplier has a negotiated price tolerance of 2%, which is lower than the observed 4% variance, so the invoice falls outside allowed tolerance and requires escalation.",
+            "uncertainties": [
+              "Invoice date extraction confidence is low (0.569); confirm invoice date if relevant for payment-term or dispute timing.",
+              "Extraction note flagged only invoice_date below 0.90; other extracted numeric fields have high confidence but should be visually confirmed before final payment action."
+            ],
+            "raw_text": "Analyst write-up:\nInvoice INV-04766 (Caldera Components Ltd, SUP-1002) references PO-2026-4004 and a single line BRKT-SS-12 for 800 units. PO unit price = AUD 7.50 (line total AUD 6,000); invoice unit price = AUD 7.80 (line total AUD 6,240). GRN-2026-4004 confirms 800 units received, so quantity reconciles. The invoiced unit price is 4.00% above the PO price, producing an invoice-to-PO line variance of AUD 240. Per POL-AP-001, standard tolerance is 5%, but the supplier's negotiated agreement (valid) sets a 2% price tolerance which takes precedence. Because the 4% variance exceeds the supplier-specific 2% tolerance, this invoice is outside allowed tolerance and should be escalated to Procurement/Commercial for approval or supplier clarification before payment. Also note the invoice date was extracted with low confidence\u2014confirm visually. Recommended next steps: (1) Hold payment pending escalation; (2) notify Procurement/Commercial with variance details (PO, GRN, invoice amounts); (3) request supplier credit or revised invoice if overcharge cannot be justified."
+          },
+          "blocked_by_policy": false,
+          "token_cost_cents": 1
+        }
+      ]
+    },
+    "email_CASE-05": {
+      "run_id": "RUN-2026-000033",
+      "state": "FINDING_READY",
+      "correlation_id": "CORR-CCFB41EED845",
+      "duplicate": false,
+      "rejected": false,
+      "document_ref": "CASE-05_INV-05149",
+      "supplier_id": "SUP-1001",
+      "use_case": "invoice_review",
+      "arrival_source": "case_email"
+    },
+    "finding_CASE-05": {
+      "run_id": "RUN-2026-000033",
+      "use_case": "invoice_review",
+      "document_ref": "CASE-05_INV-05149",
+      "supplier_id": "SUP-1001",
+      "arrival_source": "case_email",
+      "dispatch_route": "sync",
+      "verdict": "clean",
+      "checks": [
+        {
+          "what": "Invoice extraction (document_ref CASE-05_INV-05149)",
+          "result": "OK \u2014 invoice INV-05149; supplier SUP-1001; invoice_date 2026-08-28; extracted PO PO-2026-4005; total_amount field had low extractor confidence (0.572) but other line fields have high confidence."
+        },
+        {
+          "what": "Three-way match: invoice vs purchase order (PO-2026-4005)",
+          "result": "PASS \u2014 PO line: CLMP-40, ordered 100 @ 3.2 AUD each. Invoice line: CLMP-40, 80 @ 3.2 AUD each. Unit price matches PO (3.2)."
+        },
+        {
+          "what": "Three-way match: invoice vs goods receipt (GRN-2026-4005)",
+          "result": "PASS \u2014 GRN confirms 80 received. Invoice quantity = GRN quantity (80), which is acceptable under policy as a partial/short delivery when GRN confirms lower quantity."
+        },
+        {
+          "what": "Total amount arithmetic",
+          "result": "PASS after cross-check \u2014 line math 80 * 3.2 = 256.0 AUD equals invoice total (256.0). This resolves the extractor's low confidence on total_amount."
+        },
+        {
+          "what": "PO status and remaining commitment",
+          "result": "INFO \u2014 PO is open; ordered 100, received/invoiced 80, remaining commitment 20 units remains on PO. This aligns with policy distinction between short delivery and partial invoice."
+        },
+        {
+          "what": "Vendor/AP history (duplicate/previous patterns)",
+          "result": "INFO \u2014 recent invoices from SUP-1001 exist but no obvious duplicate of INV-05149 in AP history returned."
+        },
+        {
+          "what": "Policy applicability",
+          "result": "PASS \u2014 policy POL-AP-004 applies: quantity is assessed against goods receipt; invoice matches GRN and is within acceptable treatment as a partial invoice/short delivery."
+        }
+      ],
+      "policy_ids": [
+        "POL-AP-004"
+      ],
+      "policy_choice_reason": "POL-AP-004 ('Quantity Variance and Delivery Discrepancies') specifically governs three-way matching and states quantity is assessed against the goods receipt; it directly covers partial invoices/short deliveries and the PO-open handling required here.",
+      "reasoning": "Invoice INV-05149 invoices 80 units at 3.2 AUD each (total 256.0 AUD). The goods receipt (GRN-2026-4005) confirms 80 units received and the PO (PO-2026-4005) ordered 100 units at the same unit price; the PO remains open for the remaining 20 units. Under POL-AP-004 the invoice is acceptable as a partial invoice/short delivery and may be processed.",
+      "uncertainties": [
+        "Extractor reported low confidence (0.572) for total_amount; this was cross-checked by arithmetic against extracted line data and resolved (80 * 3.2 = 256.0).",
+        "The invoice extraction did not explicitly include a unit_of_measure for the invoice line; PO unit_of_measure is 'each'. Units appear consistent by item code but invoice UOM was not present in extraction output."
+      ],
+      "raw_text": "Analyst summary: Invoice INV-05149 from Meridian Fasteners (SUP-1001) references PO-2026-4005 and invoices 80 x CLMP-40 @ 3.20 AUD = 256.00 AUD. PO-2026-4005 ordered 100 x CLMP-40 @ 3.20 AUD; GRN-2026-4005 shows 80 received on 2026-08-02. The invoice quantity equals the goods receipt quantity and unit price matches the PO; PO remains open for 20 units. Per POL-AP-004 (Quantity Variance and Delivery Discrepancies), this is an acceptable partial invoice/short delivery and can be processed for payment, with the buyer/process owner retaining the PO balance for future delivery or follow-up. Recommendation: approve for payment and leave PO open for the remaining 20 units; if business needs confirmation whether the 20 units are expected, liaison with the requisitioner/buyer is optional but not required to clear AP hold.",
+      "budget": {
+        "turns": 20,
+        "turns_used": 7,
+        "usd_cents": 100,
+        "usd_spent_cents": 7,
+        "seconds": 300
+      }
+    }
+  },
+  "notes": [],
+  "case_count": 12
 }
