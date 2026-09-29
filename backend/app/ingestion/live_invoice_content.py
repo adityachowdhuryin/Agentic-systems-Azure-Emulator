@@ -301,8 +301,13 @@ def resolve_live_invoice_from_teams(
 
 
 def store_invoice_upload(document_ref: str, invoice: dict[str, Any]) -> Path:
+    from app.storage.documents import get_document_store
+
+    get_document_store().put_json(document_ref, invoice)
+    # Keep local path return for callers that expect Path
     path = uploads_dir() / f"{document_ref}.json"
-    path.write_text(json.dumps(invoice, indent=2), encoding="utf-8")
+    if not path.exists():
+        path.write_text(json.dumps(invoice, indent=2), encoding="utf-8")
     return path
 
 

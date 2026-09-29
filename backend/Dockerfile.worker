@@ -1,14 +1,4 @@
-# Multi-stage: React UI + Band A API (served together for ACA cost savings)
-FROM node:20-alpine AS ui
-WORKDIR /ui
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ .
-ENV VITE_API_URL=
-# Skip tsc in image build (strict unknown checks); Vite emits the SPA
-RUN npx vite build
-
-FROM python:3.12-slim AS api
+FROM python:3.12-slim
 WORKDIR /app/backend
 
 # Microsoft ODBC Driver 18 for Azure SQL
@@ -26,12 +16,9 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 COPY data/ /app/data/
-# Vendor master + pack fixtures used by invoice admission / live ingress
 COPY Assignment_02_Pack/ /app/Assignment_02_Pack/
-COPY --from=ui /ui/dist /app/ui
 RUN mkdir -p /app/data/invoice_uploads
 ENV DATABASE_URL=sqlite:////app/data/band_a.db
 ENV WORKER_AUTOSTART=false
 ENV ALWAYS_QUEUE=true
-EXPOSE 8000
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "app.band_b.worker"]

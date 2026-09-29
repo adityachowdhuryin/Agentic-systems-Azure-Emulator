@@ -9,8 +9,37 @@ services:
       - ./data:/app/data
     environment:
       - DATABASE_URL=sqlite:////app/data/band_a.db
-      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+      - CORS_ORIGINS=*
+      - ALWAYS_QUEUE=true
+      - WORKER_AUTOSTART=true
+      - QUEUE_BACKEND=sqlite
+      - MOCK_SYSTEMS_URL=http://mocks:8090
     working_dir: /app/backend
+    depends_on:
+      - mocks
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.worker
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/band_a.db
+      - QUEUE_BACKEND=sqlite
+      - ALWAYS_QUEUE=true
+      - MOCK_SYSTEMS_URL=http://mocks:8090
+    depends_on:
+      - mocks
+
+  mocks:
+    build:
+      context: .
+      dockerfile: services/mock_systems/Dockerfile
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./data/invoice_uploads:/app/data/invoice_uploads
 
   frontend:
     build:
@@ -22,3 +51,5 @@ services:
       - backend
     environment:
       - VITE_API_URL=http://localhost:8000
+    profiles:
+      - dev-ui

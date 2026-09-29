@@ -1,0 +1,19 @@
+{
+  "name": "webhook",
+  "version": "1.0.0",
+  "description": "Zoho Mail + Microsoft Teams bridge to Band A",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "package-teams-app": "cd teams-app && zip -r ../band-a-sales-bot.zip manifest.json color.png outline.png && echo Created ../band-a-sales-bot.zip"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "botbuilder": "^4.23.2",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1"
+  }
+}

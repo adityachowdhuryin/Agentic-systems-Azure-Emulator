@@ -238,10 +238,11 @@ class QueueRepository:
         lead_id: str,
         source: str,
         payload: dict | None = None,
+        queue_name: str | None = None,
     ) -> QueueMessage:
         msg = QueueMessage(
             message_id=f"MSG-{uuid.uuid4().hex[:12].upper()}",
-            queue_name=settings.queue_name,
+            queue_name=queue_name or settings.queue_name,
             run_id=run_id,
             tenant_id=tenant_id,
             lead_id=lead_id,
@@ -262,16 +263,18 @@ class QueueRepository:
         )
 
     def list_messages(self, status: str | None = None) -> list[QueueMessage]:
-        q = self.db.query(QueueMessage).filter(QueueMessage.queue_name == settings.queue_name)
+        names = {settings.queue_name, settings.invoice_queue_name}
+        q = self.db.query(QueueMessage).filter(QueueMessage.queue_name.in_(names))
         if status:
             q = q.filter(QueueMessage.status == status)
         return q.order_by(QueueMessage.enqueued_at.desc()).all()
 
-    def dequeue_next(self) -> QueueMessage | None:
+    def dequeue_next(self, queue_name: str | None = None) -> QueueMessage | None:
+        names = [queue_name] if queue_name else [settings.invoice_queue_name, settings.queue_name]
         msg = (
             self.db.query(QueueMessage)
             .filter(
-                QueueMessage.queue_name == settings.queue_name,
+                QueueMessage.queue_name.in_(names),
                 QueueMessage.status == QueueMessageStatus.PENDING.value,
             )
             .order_by(QueueMessage.enqueued_at.asc())
@@ -298,9 +301,10 @@ class QueueRepository:
 
     def status_counts(self) -> dict[str, int]:
         counts = {s.value: 0 for s in QueueMessageStatus}
+        names = {settings.queue_name, settings.invoice_queue_name}
         rows = (
             self.db.query(QueueMessage.status, func.count(QueueMessage.id))
-            .filter(QueueMessage.queue_name == settings.queue_name)
+            .filter(QueueMessage.queue_name.in_(names))
             .group_by(QueueMessage.status)
             .all()
         )

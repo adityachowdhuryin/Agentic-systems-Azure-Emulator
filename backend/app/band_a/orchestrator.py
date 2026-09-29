@@ -7,6 +7,7 @@ from app.band_a.admission_control import AdmissionControlService
 from app.band_a.dispatcher import DispatcherService
 from app.band_a.ingress import IngressService
 from app.band_a.run_manager import RunManagerService
+from app.config import settings
 from app.database import InboundEvent, RuntimeEvent
 from app.schemas import IngressPayload
 
@@ -76,9 +77,10 @@ class BandAOrchestrator:
         )
         _attach_events_to_run(self.db, correlation_id, run.run_id)
 
-        if force_sync:
+        if force_sync and not settings.always_queue:
             self.dispatcher.dispatch_sync(run)
         else:
+            # Plan 3A: durable handoff for all doors when always_queue is on
             self.dispatcher.dispatch_async(run)
 
         inbound.acknowledged_at = datetime.utcnow()

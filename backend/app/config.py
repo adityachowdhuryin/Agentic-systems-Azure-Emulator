@@ -14,14 +14,30 @@ class Settings(BaseSettings):
     tenant_quota_company_b: int = 50
 
     queue_name: str = "sales-lead-qualification"
+    invoice_queue_name: str = "invoice-review"
     queue_max_retries: int = 3
+    # sqlite (local) | servicebus (Azure)
+    queue_backend: str = "sqlite"
+    servicebus_fully_qualified_namespace: str = ""
+    servicebus_connection_string: str = ""
+
+    # local | blob
+    document_store_backend: str = "local"
+    invoice_uploads_dir: str = ""
+    azure_storage_account: str = ""
+    azure_blob_container: str = "documents"
+
+    # Plan 3A: always durable handoff (ignore force_sync for Band B)
+    always_queue: bool = True
+    # Auto-start Band B worker on API boot (Azure banda may leave False; bandb runs separately)
+    worker_autostart: bool = False
 
     scheduler_interval_seconds: int = 60
     scheduler_enabled: bool = False
 
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,*"
 
     mail_bridge_key: str = "local-mail-bridge-key"
     mail_tenant_id: str = "company-a"

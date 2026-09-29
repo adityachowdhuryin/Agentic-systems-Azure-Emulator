@@ -1,4 +1,10 @@
-"""Invoice review agent loop — hand-rolled while on Foundry Responses API."""
+"""Invoice review agent loop — Foundry model + gated tools (broker / policy / journal).
+
+Model client: Azure AI Foundry Responses API by default. When AGENT_RUNTIME=maf and
+Microsoft Agent Framework is installed, tool schemas are also registered via
+maf_runtime for Azure bandb parity; the control loop (budgets, journal, gate) stays here
+so Assignment 02 T-criteria remain enforceable.
+"""
 from __future__ import annotations
 
 import json
@@ -15,6 +21,7 @@ from app.band_b.broker import mint_credential
 from app.band_b.connectors import MockConnectors
 from app.band_b.context import build_turn_messages
 from app.band_b.journal import record_turn, save_finding
+from app.band_b.maf_runtime import use_maf
 from app.band_b.policy_gate import check_tool_allowed
 from app.band_b.registry import TOOL_SCHEMAS, assert_registered
 from app.config import settings
@@ -170,7 +177,7 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
         component="invoice_agent",
         action="agent_started",
         status="SUCCESS",
-        message=f"Invoice review agent started for {run.document_ref}",
+        message=f"Invoice review agent started for {run.document_ref} (runtime={'maf' if use_maf() else 'responses'})",
     )
     db.commit()
 

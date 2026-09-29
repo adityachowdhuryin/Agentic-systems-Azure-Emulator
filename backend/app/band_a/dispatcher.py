@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import LeadStatus, RunState, UseCase
-from app.repositories.base import LeadRepository, QueueRepository, RunRepository
+from app.queue.transport import get_queue_transport, queue_name_for_use_case
+from app.repositories.base import LeadRepository, RunRepository
 from app.security import add_runtime_event
 
 
@@ -10,10 +12,12 @@ class DispatcherService:
         self.db = db
         self.runs = RunRepository(db)
         self.leads = LeadRepository(db)
-        self.queue = QueueRepository(db)
+        self.transport = get_queue_transport()
 
     def dispatch_async(self, run) -> object:
         run.dispatch_route = "async"
+        use_case = getattr(run, "use_case", None)
+        qname = queue_name_for_use_case(use_case)
         add_runtime_event(
             self.db,
             run_id=run.run_id,
@@ -21,8 +25,8 @@ class DispatcherService:
             component="dispatcher",
             action="async_selected",
             status="SUCCESS",
-            message="ASYNC — qualification may take longer and caller does not wait",
-            metadata={"dispatch_route": "async", "use_case": getattr(run, "use_case", None)},
+            message="ASYNC — durable handoff; Band B worker consumes the run",
+            metadata={"dispatch_route": "async", "use_case": use_case, "queue": qname},
         )
 
         self.runs.update_state(run, RunState.DISPATCHED.value)
@@ -31,17 +35,19 @@ class DispatcherService:
         if lead:
             self.leads.update_status(lead, LeadStatus.QUALIFICATION_IN_PROGRESS.value)
 
-        msg = self.queue.enqueue(
+        message_id = self.transport.publish(
+            self.db,
             run_id=run.run_id,
             tenant_id=run.tenant_id,
             lead_id=run.lead_id,
             source=run.source,
+            use_case=use_case,
             payload={
                 "run_id": run.run_id,
                 "lead_id": run.lead_id,
                 "tenant_id": run.tenant_id,
                 "source": run.source,
-                "use_case": getattr(run, "use_case", None),
+                "use_case": use_case,
             },
         )
 
@@ -54,12 +60,21 @@ class DispatcherService:
             component="message_transport",
             action="enqueued",
             status="SUCCESS",
-            message=f"Message {msg.message_id} enqueued to sales-lead-qualification",
+            message=f"Message {message_id} enqueued to {qname}",
         )
 
-        return msg
+        return message_id
 
     def dispatch_sync(self, run) -> dict:
+        """Legacy in-process path. When always_queue=True, redirects to async."""
+        if settings.always_queue:
+            self.dispatch_async(run)
+            return {
+                "run_id": run.run_id,
+                "dispatch_route": "async",
+                "message": "always_queue=True — redirected sync to durable queue",
+            }
+
         run.dispatch_route = "sync"
         add_runtime_event(
             self.db,

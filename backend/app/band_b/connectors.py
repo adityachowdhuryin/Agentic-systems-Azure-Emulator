@@ -19,6 +19,9 @@ class MockConnectors:
                     params={"document_ref": args["document_ref"]},
                     headers=headers,
                 )
+                if r.status_code == 404:
+                    # Live Azure uploads live in blob/local document store, not mocks disk
+                    return self._extract_from_document_store(args["document_ref"])
             elif tool_name == "get_purchase_order":
                 r = client.get(
                     f"{self.base}/erp/purchase-orders/{args['po_number']}",
@@ -56,3 +59,29 @@ class MockConnectors:
             if r.status_code >= 400:
                 return {"error": r.status_code, "detail": r.text}
             return r.json()
+
+    @staticmethod
+    def _extract_from_document_store(document_ref: str) -> dict:
+        from app.storage.documents import get_document_store
+
+        inv = get_document_store().get_json(document_ref)
+        if not inv:
+            return {"error": 404, "detail": "document not found"}
+        if "lines" not in inv:
+            inv = {**inv, "lines": []}
+        return {
+            "document_ref": document_ref,
+            "extracted": inv,
+            "field_confidence": {
+                k: 0.95
+                for k in (
+                    "invoice_number",
+                    "supplier_id",
+                    "invoice_date",
+                    "po_reference",
+                    "total_amount",
+                )
+                if inv.get(k) is not None and inv.get(k) != ""
+            },
+            "note": "Served from document store (live upload).",
+        }

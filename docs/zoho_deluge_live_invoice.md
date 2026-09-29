@@ -1,9 +1,9 @@
-# Zoho Deluge — live invoice (real attach + body paste)
+# Zoho Deluge — live invoice (Azure + local)
 
 **Primary demo path:** attach a pack `.json` / `.txt` (e.g. `CASE-09_INV-01417.json`).  
 **Fallback:** paste the same JSON into the email body.
 
-Band A prefers attachments, then body. No local `CASE-XX` mapping. Unrelated live mail (no pack-shaped invoice) still creates an Invoice Review run; Band B returns `exception:not_an_invoice`. Sales Lead demos use the dashboard Zoho simulator, not live Deluge.
+Band A prefers attachments, then body. Unrelated live mail still creates an Invoice Review run; Band B returns `exception:not_an_invoice`.
 
 Your Mail IDs (locked):
 
@@ -11,7 +11,13 @@ Your Mail IDs (locked):
 - `folderId` = `7135116000000008014` (inbox)
 - Connection = `zoho` — if attach download fails with 401, re-authorize with `ZohoMail.messages.READ` or `ALL`
 
-Replace the ngrok host whenever the tunnel restarts (current example below).
+## Azure (preferred — no ngrok)
+
+Point Deluge straight at banda HTTPS. Header `X-Mail-Bridge-Key` must match the ACA env (`local-mail-bridge-key` unless rotated).
+
+```
+https://banda.calmdesert-93d3b4f1.eastus2.azurecontainerapps.io/api/v1/webhooks/zoho-mail
+```
 
 ---
 
@@ -99,23 +105,21 @@ payload.put("attachments",attachmentsOut);
 
 response = invokeurl
 [
-	url :"https://passage-duplicate-spearhead.ngrok-free.dev/webhook"
+	url :"https://banda.calmdesert-93d3b4f1.eastus2.azurecontainerapps.io/api/v1/webhooks/zoho-mail"
 	type :POST
 	body:payload
-	headers:{"Content-Type":"application/json"}
+	headers:{"Content-Type":"application/json","X-Mail-Bridge-Key":"local-mail-bridge-key"}
 	detailed:true
 ];
 info "Webhook response: " + response;
 info "Attachment count: " + attachmentsOut.size();
 ```
 
-After Save: stay on **Invoice Review**, send mail with only the JSON file attached (body can be “please process”). Bridge should log non-empty attachments; UI auto-selects the run.
+After Save: stay on **Invoice Review**, send mail with only the JSON file attached (body can be “please process”). UI auto-selects the run on the Azure dashboard.
 
 ---
 
 ## Script A — body paste only (fallback)
-
-Use if attach download fails. Paste pack JSON into the email **body**.
 
 ```javascript
 messageDetails = zoho.mail.getMessage(mail_messageId,"zoho");
@@ -134,10 +138,10 @@ payload.put("attachments",List());
 
 response = invokeurl
 [
-	url :"https://passage-duplicate-spearhead.ngrok-free.dev/webhook"
+	url :"https://banda.calmdesert-93d3b4f1.eastus2.azurecontainerapps.io/api/v1/webhooks/zoho-mail"
 	type :POST
 	body:payload
-	headers:{"Content-Type":"application/json"}
+	headers:{"Content-Type":"application/json","X-Mail-Bridge-Key":"local-mail-bridge-key"}
 	detailed:true
 ];
 info "Webhook response: " + response;
@@ -145,10 +149,10 @@ info "Webhook response: " + response;
 
 ---
 
-## Ops checklist
+## Local (optional — ngrok + Desktop bridge)
 
-1. `~/Desktop/webhook` + `ngrok http 8080`  
-2. Deluge URL matches current ngrok `…/webhook`  
-3. http://127.0.0.1:8080/health · http://127.0.0.1:8000/api/v1/webhooks/zoho-mail/health  
-4. Bridge log: `Attachments: N` with N > 0 for file attach  
-5. If attach empty: re-auth `"zoho"` connection scopes; check Deluge `info` for NEWATT / Attachment fetch skipped
+Only if developing against localhost:
+
+1. `~/Desktop/webhook` + `ngrok http 8080`
+2. Deluge URL = `https://<ngrok-host>/webhook` (bridge adds the mail key)
+3. http://127.0.0.1:8080/health · http://127.0.0.1:8000/api/v1/webhooks/zoho-mail/health
