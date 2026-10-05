@@ -2,7 +2,7 @@
 
 Local dual-mode runtime for the Agentic Systems Lab:
 
-1. **Invoice Review** (Assignment 02 / Build 02) — Band A entry control + hand-rolled Band B agent loop against Azure AI Foundry; ERP/policy mocks on `:8090`
+1. **Invoice Review** (Assignment 02 / Build 02) — Band A entry control + Band B agent loop (Microsoft Agent Framework → Foundry, with Responses fallback); ERP/policy mocks on `:8090`
 2. **Sales Lead Qualification** (Assignment 01 / Band A) — governed ingress → admission → run → dispatch → queue with a mock Band B consumer (no LLM)
 
 The UI defaults to **Invoice Review**. Switch modes in the dashboard header.
@@ -14,7 +14,7 @@ The UI defaults to **Invoice Review**. Switch modes in the dashboard header.
 | Band A (ingress, admission, run, dispatch, queue) | Local FastAPI + SQLite |
 | Band B invoice agent (while-loop, 7 tools, policy gate, broker, journal/replay) | Local |
 | Mock ERP / extract / policy HTTP APIs | Local `:8090` |
-| Model calls (`gpt-5-mini` via Foundry Responses API) | **Only cloud dependency** |
+| Model calls (`gpt-5-mini` via Agent Framework / Foundry; `AGENT_RUNTIME=maf`) | **Only cloud dependency** |
 | Live Zoho attachment/body → invoice | Supported (bridge + ngrok) |
 | Live Teams JSON paste → invoice | Supported (bridge + ngrok) |
 | Azure Phase 5 | Deferred |

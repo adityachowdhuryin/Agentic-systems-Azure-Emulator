@@ -57,4 +57,4 @@ Then deploy `azure/infra/apps.bicep` with foundation outputs.
 ## Local
 
 `ALWAYS_QUEUE=true` (default). Start worker via Queue panel or `python -m app.band_b.worker`.
-`AGENT_RUNTIME=maf` when Agent Framework is installed on bandb.
+`AGENT_RUNTIME=maf` on bandb (default in image — `agent-framework-foundry` in `backend/requirements.txt`). Set `AGENT_RUNTIME=responses` locally to force the hand-rolled Foundry Responses path.

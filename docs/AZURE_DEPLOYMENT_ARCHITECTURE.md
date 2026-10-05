@@ -1,10 +1,10 @@
 # Azure Emulator — Local & Azure Architecture
 
-Based on the current codebase (Band A FastAPI, Band B hand-rolled Foundry Responses agent, mocks, live Zoho/Teams doors).
+Based on the current codebase (Band A FastAPI, Band B invoice agent via Microsoft Agent Framework or Foundry Responses fallback, mocks, live Zoho/Teams doors).
 
-**Azure target (infra):** ACA + SQL + Service Bus + Blob + Key Vault + App Insights — without over-building.
+**Azure (infra):** ACA + SQL + Service Bus + Blob + Key Vault + App Insights — without over-building.
 
-**Azure target (Band B implementation):** Microsoft Agent Framework inside the `bandb` worker (not a new Azure service). Band A stays FastAPI / Azure SDK with **no AI**. Foundry remains the **model** endpoint. This Band B swap is a **target decision** — local code today is still the hand-rolled loop in `backend/app/band_b/agent_loop.py`.
+**Band B implementation:** Microsoft Agent Framework (`agent-framework-foundry`) inside the `bandb` worker when `AGENT_RUNTIME=maf`. The outer governance loop (budgets, policy gate, broker, journal) stays in `backend/app/band_b/agent_loop.py`; MAF handles one model turn per iteration via `FoundryChatClient`. Fallback: hand-rolled Foundry Responses API when `AGENT_RUNTIME=responses` or MAF is not installed. Band A stays FastAPI / Azure SDK with **no AI**. Foundry remains the **model** endpoint.
 
 | Metric | Value |
 | --- | --- |
@@ -19,7 +19,7 @@ Based on the current codebase (Band A FastAPI, Band B hand-rolled Foundry Respon
 
 Source of truth: `backend/app`, `services/mock_systems`, `frontend`, external webhook + ngrok.
 
-Band B **today** is the hand-rolled loop in `backend/app/band_b/agent_loop.py` (Foundry Responses API). Microsoft Agent Framework is the **Azure / graded target** for that loop (see §2–§4), not the current local runtime.
+Band B uses the while-loop in `backend/app/band_b/agent_loop.py` with model calls routed through `_invoke_model()` → MAF (`maf_runtime._call_model_maf`) or Responses API (`_call_model`). Azure `bandb` sets `AGENT_RUNTIME=maf`.
 
 ### Process topology
 
@@ -160,7 +160,7 @@ Agent Framework does **not** appear as its own box next to SQL / Service Bus / B
 | --- | --- | --- |
 | Subscription / RG | Deploy into existing **`Ai-Agent`** (eastus2); Foundry already there | All new resources use `asl-invoice-*` names in `Ai-Agent` |
 | Foundry model deployment name | Runtime uses `gpt-5-mini`; plan may say `gpt-4o-mini` | Model name must match Foundry deployment (env / Agent Framework client config) |
-| Band B → Microsoft Agent Framework | **Target decision** (not implemented in repo yet) | Replace hand-rolled `agent_loop`; keep same tools / broker / policy gate / journal / door-blind context (Assignment 02 T-criteria) |
+| Band B → Microsoft Agent Framework | **Implemented** (`AGENT_RUNTIME=maf`, `maf_runtime.py`) | Per-turn MAF + existing governance loop; Responses fallback for dev/tests |
 | Always-queue vs local sync paths | Local still uses `force_sync` / in-process Band B for some doors | Azure target prefers Band A → Service Bus → `bandb`; confirm whether sync-in-process remains for chat latency |
 | Keep Node bridge vs Deluge→ACA direct | Needs product choice | One fewer container if retired |
 | Mocks in Azure vs laptop-only | Plan includes ACA mocks | Needed for graded Azure demo |

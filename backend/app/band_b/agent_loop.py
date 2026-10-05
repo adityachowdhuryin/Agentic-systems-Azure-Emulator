@@ -1,9 +1,8 @@
 """Invoice review agent loop — Foundry model + gated tools (broker / policy / journal).
 
-Model client: Azure AI Foundry Responses API by default. When AGENT_RUNTIME=maf and
-Microsoft Agent Framework is installed, tool schemas are also registered via
-maf_runtime for Azure bandb parity; the control loop (budgets, journal, gate) stays here
-so Assignment 02 T-criteria remain enforceable.
+Model client: routed via _invoke_model() — MAF FoundryChatClient when AGENT_RUNTIME=maf
+(agent-framework-foundry installed), else Foundry Responses API. The control loop
+(budgets, journal, gate, broker) stays here so Assignment 02 T-criteria remain enforceable.
 """
 from __future__ import annotations
 
@@ -21,7 +20,7 @@ from app.band_b.broker import mint_credential
 from app.band_b.connectors import MockConnectors
 from app.band_b.context import build_turn_messages
 from app.band_b.journal import record_turn, save_finding
-from app.band_b.maf_runtime import use_maf
+from app.band_b.maf_runtime import _call_model_maf, use_maf
 from app.band_b.policy_gate import check_tool_allowed
 from app.band_b.registry import TOOL_SCHEMAS, assert_registered
 from app.config import settings
@@ -95,6 +94,13 @@ def _parse_final_finding(text: str) -> dict:
         "uncertainties": ["Model output was not valid JSON"],
         "raw_text": text,
     }
+
+
+def _invoke_model(messages: list[dict[str, Any]]):
+    """Route to MAF (Agent Framework) or hand-rolled Foundry Responses API."""
+    if use_maf():
+        return _call_model_maf(messages)
+    return _call_model(messages)
 
 
 def _call_model(messages: list[dict[str, Any]]) -> dict:
@@ -254,7 +260,7 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
         }
 
         try:
-            resp = _call_model(messages)
+            resp = _invoke_model(messages)
         except Exception as exc:
             logger.exception("Model call failed")
             final = {

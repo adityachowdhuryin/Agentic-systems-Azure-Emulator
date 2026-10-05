@@ -187,7 +187,7 @@ def test_t4_stop_turn_budget(db):
     run.budget_seconds = 300
     db.commit()
 
-    with patch("app.band_b.agent_loop._call_model") as mock_model:
+    with patch("app.band_b.agent_loop._invoke_model") as mock_model:
         mock_model.side_effect = AssertionError("model must not be called after turn stop")
         final = run_invoice_agent(db, run)
 
@@ -206,7 +206,7 @@ def test_t4_stop_money_budget(db):
     run.budget_seconds = 300
     db.commit()
 
-    with patch("app.band_b.agent_loop._call_model") as mock_model:
+    with patch("app.band_b.agent_loop._invoke_model") as mock_model:
         mock_model.side_effect = AssertionError("model must not be called after money stop")
         final = run_invoice_agent(db, run)
 
@@ -225,7 +225,7 @@ def test_t4_stop_time_budget(db):
     run.budget_seconds = 0  # elapsed >= 0 immediately
     db.commit()
 
-    with patch("app.band_b.agent_loop._call_model") as mock_model:
+    with patch("app.band_b.agent_loop._invoke_model") as mock_model:
         mock_model.side_effect = AssertionError("model must not be called after time stop")
         final = run_invoice_agent(db, run)
 
@@ -235,3 +235,69 @@ def test_t4_stop_time_budget(db):
     decided = [t.decided for t in list_turns(db, run.run_id)]
     assert "stop:time_budget" in decided
     mock_model.assert_not_called()
+
+
+def test_use_maf_routes_to_maf_path(db, monkeypatch):
+    from app.band_b.maf_runtime import MafModelResponse
+
+    monkeypatch.setenv("AGENT_RUNTIME", "maf")
+    run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
+    run.budget_turns = 1
+    db.commit()
+
+    finding = {
+        "verdict": "clean",
+        "checks": [],
+        "policy_ids": [],
+        "policy_choice_reason": "",
+        "reasoning": "ok",
+        "uncertainties": [],
+        "raw_text": "ok",
+    }
+    maf_resp = MafModelResponse(
+        output_text=json.dumps(finding),
+        output=[],
+    )
+
+    with (
+        patch("app.band_b.maf_runtime.maf_available", return_value=True),
+        patch("app.band_b.agent_loop._call_model_maf", return_value=maf_resp) as mock_maf,
+        patch("app.band_b.agent_loop._call_model") as mock_responses,
+    ):
+        final = run_invoice_agent(db, run)
+
+    assert final["verdict"] == "clean"
+    mock_maf.assert_called()
+    mock_responses.assert_not_called()
+
+
+def test_use_maf_falls_back_when_package_missing(db, monkeypatch):
+    monkeypatch.setenv("AGENT_RUNTIME", "maf")
+    run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
+    run.budget_turns = 1
+    db.commit()
+
+    finding = {
+        "verdict": "clean",
+        "checks": [],
+        "policy_ids": [],
+        "policy_choice_reason": "",
+        "reasoning": "ok",
+        "uncertainties": [],
+        "raw_text": "ok",
+    }
+
+    class _FakeResp:
+        output_text = json.dumps(finding)
+        output = []
+
+    with (
+        patch("app.band_b.maf_runtime.maf_available", return_value=False),
+        patch("app.band_b.agent_loop._call_model_maf") as mock_maf,
+        patch("app.band_b.agent_loop._call_model", return_value=_FakeResp()) as mock_responses,
+    ):
+        final = run_invoice_agent(db, run)
+
+    assert final["verdict"] == "clean"
+    mock_maf.assert_not_called()
+    mock_responses.assert_called()

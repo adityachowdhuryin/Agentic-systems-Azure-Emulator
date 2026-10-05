@@ -17,5 +17,5 @@ python-dotenv>=1.0.0
 pyodbc>=5.1.0
 pytest==8.3.4
 pytest-asyncio==0.25.0
-# Optional Band B runtime (install separately when ready):
-# agent-framework>=1.0.0
+# Band B Microsoft Agent Framework (Foundry); AGENT_RUNTIME=maf
+agent-framework-foundry>=1.0.0
