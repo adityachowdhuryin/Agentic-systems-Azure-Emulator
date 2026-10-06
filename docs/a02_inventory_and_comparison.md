@@ -13,7 +13,7 @@
 | Tool registry (exactly 7) | `backend/app/band_b/registry.py` | Unregistered = unreachable |
 | Connectors | `backend/app/band_b/connectors.py` | HTTP → mocks (`:8090` local / ACA `mocks`) |
 | Policy gate | `backend/app/band_b/policy_gate.py` | Independent module (T7) |
-| Credential broker | `backend/app/band_b/broker.py` | Journal-proven intent → short-lived `b1.*` HMAC tokens (T5) |
+| Credential broker | `backend/app/band_b/broker.py` | Journal-proven intent → short-lived `b1.*` HMAC tokens (T5). Azure: KV `broker-hmac-secret` → `bandb` + `mocks`; local default for demos |
 | Journal + replay | `backend/app/band_b/journal.py` | Replay = 0 model calls |
 | Context assembler | `backend/app/band_b/context.py` | Rebuild each turn; last 6 tool results |
 | Mock systems | `services/mock_systems/run_mocks.py` | Port **8090**; accepts HMAC + static pack tokens |
@@ -59,7 +59,7 @@ Risk this build is near zero because tools are read-only; listing the surface is
 |---|---|
 | Band A | Ingress · admission · run · dispatch — no AI (FastAPI `banda`) |
 | Band B | Invoice worker — Agent Framework → Foundry `gpt-5-mini` + 7 tools |
-| Queue | SQLite local · Azure Service Bus `invoice-review` / `sales-lead-qualification` |
+| Queue | SQLite local · Azure Service Bus `invoice-review` / `sales-lead-qualification`. `ALWAYS_QUEUE=true`: ack + poll finding (Teams), not same-connection Band B |
 | Model path | `AGENT_RUNTIME=maf` → `FoundryChatClient`; `responses` = fallback |
 | Mocks | Fake ERP / extract / policy |
 | Data | SQLite + uploads local · Azure SQL + Blob on cloud |
@@ -68,7 +68,7 @@ Risk this build is near zero because tools are read-only; listing the surface is
 
 ## Azure (live)
 
-ACA (`banda` / `bandb` / `mocks` / `bridge`) + Service Bus + SQL + Blob + Key Vault + App Insights. Live Zoho Deluge and Teams bot point at Azure HTTPS (see `docs/AZURE_LIVE_CUTOVER.md`).
+ACA (`banda` / `bandb` / `mocks` / `bridge`) + Service Bus + SQL + Blob + Key Vault + App Insights. Live Zoho Deluge and Teams bot point at Azure HTTPS (see `docs/AZURE_LIVE_CUTOVER.md`). Broker HMAC: Key Vault `broker-hmac-secret` on `bandb`/`mocks` (see `docs/AZURE_LIVE_STATUS.md`).
 
 ## Acceptance
 
