@@ -40,13 +40,6 @@ const PINNED_CASES: Record<string, string> = {
   "CASE-06": "clean match (recommended)",
 };
 
-const DEMO_STEPS = [
-  { id: "email", label: "1 · Email run" },
-  { id: "chat", label: "2 · Chat run" },
-  { id: "policy", label: "3 · Policy block" },
-  { id: "replay", label: "4 · Replay" },
-] as const;
-
 const COMPARISON_ROWS: { piece: string; platform: string; ours: string }[] = [
   {
     piece: "Agent loop",
@@ -96,8 +89,14 @@ function doorLabel(arrival?: string | null) {
   return arrival || "—";
 }
 
-function isIngressDoor(arrival?: string | null) {
-  return arrival === "case_email" || arrival === "zoho_mail" || arrival === "teams";
+/** Only show queue/route while work is still in flight — not on finished findings. */
+function routeBadge(state?: string | null, dispatchRoute?: string | null): string | null {
+  if (state === "QUEUED" || state === "DISPATCHED") return "in queue";
+  if (state === "REVIEWING") return "reviewing";
+  if (dispatchRoute === "sync" && state && !["FINDING_READY", "FAILED", "REJECTED"].includes(state)) {
+    return "sync";
+  }
+  return null;
 }
 
 function toolOrder(turns: JournalTurn[]) {
@@ -336,24 +335,16 @@ export function InvoiceReviewPanel({
     });
   }, [cases]);
 
-  const demoStep = useMemo(() => {
-    if (replay) return "replay";
-    if (turns.some((t) => t.blocked_by_policy)) return "policy";
-    const hasEmail = runs.some((r) => isIngressDoor(r.arrival_source));
-    const hasChat = runs.some((r) => r.arrival_source === "chat");
-    if (hasEmail && hasChat) return "chat";
-    if (hasEmail) return "email";
-    return "email";
-  }, [runs, turns, replay]);
-
   const comparePair = useMemo(() => {
     const a = compareIds[0] ? runs.find((r) => r.run_id === compareIds[0]) : null;
     const b = compareIds[1] ? runs.find((r) => r.run_id === compareIds[1]) : null;
     if (a && b) return [a, b] as const;
-    // Auto: same document_ref, email/zoho/teams + chat
+    // Auto only for CASE email + in-app chat on the same document (lab demo).
     for (const r of runs) {
       if (!r.document_ref) continue;
-      const email = runs.find((x) => x.document_ref === r.document_ref && isIngressDoor(x.arrival_source));
+      const email = runs.find(
+        (x) => x.document_ref === r.document_ref && x.arrival_source === "case_email"
+      );
       const chat = runs.find((x) => x.document_ref === r.document_ref && x.arrival_source === "chat");
       if (email && chat) return [email, chat] as const;
     }
@@ -519,27 +510,11 @@ export function InvoiceReviewPanel({
         />
       </div>
 
-      {/* B. Demo steps */}
-      <div className="flex flex-wrap gap-2">
-        {DEMO_STEPS.map((s) => (
-          <span
-            key={s.id}
-            className={`font-mono text-xs px-3 py-1.5 rounded-full border ${
-              demoStep === s.id
-                ? "bg-ink text-white border-ink"
-                : "bg-white text-ink-soft border-hairline"
-            }`}
-          >
-            {s.label}
-          </span>
-        ))}
-      </div>
-
-      {/* C. Case player */}
+      {/* C. Case player (lab fixtures — live Zoho/Teams appear in runs below) */}
       <div className="rounded-xl border border-line bg-white p-4 space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm flex flex-col gap-1 min-w-[16rem] flex-1">
-            <span className="text-muted">CASE (pinned demos first)</span>
+            <span className="text-muted">CASE fixture (lab)</span>
             <select
               className="border border-line rounded-md px-2 py-1.5 font-mono text-sm"
               value={selectedCase}
@@ -553,12 +528,12 @@ export function InvoiceReviewPanel({
               ))}
             </select>
           </label>
-          <label className="text-sm flex items-center gap-2 pb-1.5">
+          <label className="text-sm flex items-center gap-2 pb-1.5" title="Ignored when ALWAYS_QUEUE=true (Azure default)">
             <input type="checkbox" checked={forceSync} onChange={(e) => setForceSync(e.target.checked)} />
-            Sync (skip queue)
+            Sync CASE (local only)
           </label>
           <ActionButton loading={busy === "email"} onClick={handleEmailIngest} className="!w-auto px-3">
-            Play CASE (email door)
+            Play CASE (email)
           </ActionButton>
           <ActionButton loading={busy === "chat"} onClick={handleChat} className="!w-auto px-3">
             Ask in chat
@@ -570,28 +545,23 @@ export function InvoiceReviewPanel({
             disabled={!activeRunId}
             className="!w-auto px-3"
           >
-            Demo: force policy block
+            Force policy block
           </ActionButton>
           <ActionButton loading={busy === "replay"} onClick={handleReplay} disabled={!activeRunId} className="!w-auto px-3">
             Replay journal
           </ActionButton>
         </div>
-        <p className="text-xs text-muted">
-          Email → async or sync · chat always sync · agent never sees which door · mocks :8090 · Foundry{" "}
-          {health?.model.name || "gpt-5-mini"}
-        </p>
-        <p className="text-xs text-muted">
-          Live Zoho: <span className="font-semibold">attach</span> pack{" "}
-          <span className="font-mono">.json</span>/<span className="font-mono">.txt</span>{" "}
-          <span className="font-semibold">or paste</span> JSON in the body to{" "}
-          <span className="font-mono">aditya.chowdhury@giantleapsystems.com</span> → door{" "}
-          <span className="font-mono">zoho</span>. Live Teams 1:1:{" "}
-          <span className="font-semibold">paste</span> pack JSON in the chat (prose + JSON OK) → door{" "}
-          <span className="font-mono">teams</span>. Unrelated Zoho/Teams text still lands in Invoice Review
-          with an <span className="font-mono">exception:not_an_invoice</span> finding (not Sales Lead). No live{" "}
-          <span className="font-mono">CASE-XX</span> map — use Play CASE in the UI for fixtures. Bridge :8080 +
-          ngrok + Deluge Script B required for Zoho file attach. Use dashboard simulators for Sales Lead demos.
-        </p>
+        <details className="text-xs text-muted">
+          <summary className="cursor-pointer hover:text-ink">Live doors &amp; lab notes</summary>
+          <p className="mt-2 leading-relaxed">
+            <span className="font-semibold">Zoho:</span> attach or paste invoice JSON to{" "}
+            <span className="font-mono">aditya.chowdhury@giantleapsystems.com</span>.{" "}
+            <span className="font-semibold">Teams:</span> paste JSON in 1:1 chat with the bot. Unrelated text
+            still gets an <span className="font-mono">exception:not_an_invoice</span> finding. Live traffic
+            always queues to Band B (Service Bus) — the CASE Sync checkbox does not apply. Agent never sees
+            which door was used.
+          </p>
+        </details>
         {investigating && (
           <div className="flex items-center gap-2 text-sm bg-own-tint text-own px-3 py-2 rounded-md">
             <span className="inline-block w-3 h-3 border-2 border-own border-t-transparent rounded-full animate-spin" />
@@ -600,13 +570,14 @@ export function InvoiceReviewPanel({
         )}
       </div>
 
-      {/* D. Runs + compare */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      {/* D. Runs (+ optional compare when two runs pinned) */}
+      <div className={`grid gap-4 ${comparePair ? "lg:grid-cols-2" : ""}`}>
         <div className="rounded-xl border border-line bg-white p-4">
-          <h3 className="font-semibold mb-1">Invoice runs</h3>
-          <p className="text-xs text-muted mb-2">Door badges are for you — the agent never receives them.</p>
+          <h3 className="font-semibold mb-2">Invoice runs</h3>
           <ul className="space-y-1 max-h-72 overflow-auto text-sm">
-            {runs.map((r) => (
+            {runs.map((r) => {
+              const route = routeBadge(r.state, r.dispatch_route);
+              return (
               <li key={r.run_id}>
                     <div
                       className={`group w-full text-left px-2 py-1.5 rounded-md hover:bg-gray-50 ${
@@ -618,19 +589,22 @@ export function InvoiceReviewPanel({
                           <span className="font-mono text-xs">{r.run_id}</span>
                           <StatusBadge status={r.state} />
                         </div>
-                        <div className="text-xs text-muted truncate mt-0.5">{r.document_ref}</div>
+                        <div className="text-xs text-muted break-all mt-0.5">{r.document_ref}</div>
                       </button>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-gray-100">
                           door:{doorLabel(r.arrival_source)}
                         </span>
-                        <span className="font-mono text-[10px] text-muted">{r.dispatch_route}</span>
+                        {route && (
+                          <span className="font-mono text-[10px] text-muted">{route}</span>
+                        )}
                         <button
                           type="button"
-                          className="ml-auto text-[10px] font-mono underline text-own"
+                          className="ml-auto text-[10px] font-mono underline text-own opacity-0 group-hover:opacity-100 focus:opacity-100"
                           onClick={() => toggleComparePin(r.run_id)}
+                          title="Pin two runs to compare tool order"
                         >
-                          {compareIds[0] === r.run_id || compareIds[1] === r.run_id ? "unpin" : "pin compare"}
+                          {compareIds[0] === r.run_id || compareIds[1] === r.run_id ? "unpin" : "compare"}
                         </button>
                         <button
                           type="button"
@@ -649,20 +623,18 @@ export function InvoiceReviewPanel({
                       </div>
                     </div>
               </li>
-            ))}
+            );
+            })}
             {runs.length === 0 && <li className="text-muted text-sm">No invoice runs yet</li>}
           </ul>
         </div>
 
+        {comparePair && (
         <div className="rounded-xl border border-line bg-white p-4">
-          <h3 className="font-semibold mb-1">Email vs chat compare</h3>
-          <p className="text-xs text-muted mb-3">Same document, different doors — tool order can differ; both valid.</p>
-          {!comparePair && (
-            <p className="text-sm text-muted">
-              Run the same CASE via email and chat (or pin two runs) to unlock this panel.
-            </p>
-          )}
-          {comparePair && (
+          <h3 className="font-semibold mb-1">Compare runs</h3>
+          <p className="text-xs text-muted mb-3">
+            Side-by-side tool order (lab CASE email vs chat, or any two pinned runs).
+          </p>
             <div className="grid grid-cols-2 gap-3 text-sm">
               {comparePair.map((r, i) => (
                 <div key={r.run_id} className="border border-hairline rounded-md p-2">
@@ -685,8 +657,8 @@ export function InvoiceReviewPanel({
                 </div>
               ))}
             </div>
-          )}
         </div>
+        )}
       </div>
 
       {/* E. Finding */}
@@ -700,7 +672,6 @@ export function InvoiceReviewPanel({
               <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-gray-100">
                 door:{doorLabel(finding.arrival_source)}
               </span>
-              <span className="font-mono text-[10px] text-muted">{finding.dispatch_route}</span>
             </div>
             {inboundMail && (
               <div className="rounded-md border border-line bg-gray-50 px-3 py-2 text-xs space-y-1">
@@ -736,7 +707,7 @@ export function InvoiceReviewPanel({
                   </div>
                 )}
                 {inboundMail.mail_body ? (
-                  <pre className="text-muted whitespace-pre-wrap font-sans max-h-28 overflow-y-auto text-[11px]">
+                  <pre className="text-muted whitespace-pre-wrap font-sans max-h-64 overflow-y-auto text-[11px]">
                     {inboundMail.mail_body}
                   </pre>
                 ) : null}
@@ -777,7 +748,9 @@ export function InvoiceReviewPanel({
                   <span className="text-muted">From:</span> {inboundTeams.teams_from || "—"}
                 </div>
                 {inboundTeams.teams_text && (
-                  <p className="text-muted whitespace-pre-wrap line-clamp-3">{inboundTeams.teams_text}</p>
+                  <pre className="text-muted whitespace-pre-wrap font-sans max-h-64 overflow-y-auto text-[11px]">
+                    {inboundTeams.teams_text}
+                  </pre>
                 )}
               </div>
             )}
