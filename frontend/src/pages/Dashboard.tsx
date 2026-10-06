@@ -9,6 +9,7 @@ import { EventTimeline } from "../components/EventTimeline";
 import { PipelineAnimation } from "../components/PipelineAnimation";
 import { StatusBadge } from "../components/StatusBadge";
 import { StatusBanner, type BannerType } from "../components/StatusBanner";
+import { TrashIcon } from "../components/TrashIcon";
 import { getPollingInterval, isRunInProgress, usePolling } from "../hooks/usePolling";
 import {
   demoAdmission,
@@ -116,12 +117,24 @@ export default function Dashboard() {
   const knownRunIdsRef = useRef<Set<string>>(new Set());
   const watchRunOverrideRef = useRef<string | null | undefined>(undefined);
 
-  const showBanner = (message: string, type: BannerType, autoDismiss = type !== "error") => {
-    setBanner({ message, type });
-    if (autoDismiss && type !== "error") {
-      setTimeout(() => setBanner(null), 5000);
-    }
-  };
+  const showBanner = useCallback(
+    (message: string, type: BannerType, autoDismiss = type !== "error") => {
+      setBanner({ message, type });
+      if (autoDismiss && type !== "error") {
+        setTimeout(() => setBanner(null), 5000);
+      }
+    },
+    []
+  );
+
+  /** Drop sticky load errors once invoice data is reachable again. */
+  const clearErrorBanner = useCallback(() => {
+    setBanner((prev) => (prev?.type === "error" ? null : prev));
+  }, []);
+
+  const handleWatchRun = useCallback((id: string | null) => {
+    setActiveRunId(id);
+  }, []);
 
   const setActionLoading = (key: string, value: boolean) => {
     setLoading((prev) => ({ ...prev, [key]: value }));
@@ -585,7 +598,8 @@ export default function Dashboard() {
           tenant={tenant}
           resetNonce={invoiceResetNonce}
           onBanner={showBanner}
-          onWatchRun={(id) => setActiveRunId(id)}
+          onClearErrorBanner={clearErrorBanner}
+          onWatchRun={handleWatchRun}
         />
       ) : (
       <>
@@ -1091,7 +1105,7 @@ export default function Dashboard() {
                         type="button"
                         title={`Delete ${runId}`}
                         aria-label={`Delete run ${runId}`}
-                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 text-invariant hover:text-invariant/80 px-1 leading-none"
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 text-invariant hover:text-invariant/80 p-0.5 leading-none"
                         onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -1112,7 +1126,7 @@ export default function Dashboard() {
                           }
                         }}
                       >
-                        ×
+                        <TrashIcon className="w-3.5 h-3.5" />
                       </button>
                     </span>
                   ) : (

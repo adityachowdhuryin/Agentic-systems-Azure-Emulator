@@ -159,6 +159,30 @@ def _extract_tool_calls(resp) -> list[dict]:
     return calls
 
 
+def _finding_as_dict(row: Finding) -> dict:
+    try:
+        checks = json.loads(row.checks_json or "[]")
+    except json.JSONDecodeError:
+        checks = []
+    try:
+        policy_ids = json.loads(row.policy_ids_json or "[]")
+    except json.JSONDecodeError:
+        policy_ids = []
+    try:
+        uncertainties = json.loads(getattr(row, "uncertainties_json", None) or "[]")
+    except json.JSONDecodeError:
+        uncertainties = []
+    return {
+        "verdict": row.verdict or "",
+        "checks": checks if isinstance(checks, list) else [],
+        "policy_ids": policy_ids if isinstance(policy_ids, list) else [],
+        "policy_choice_reason": getattr(row, "policy_choice_reason", None) or "",
+        "reasoning": getattr(row, "reasoning", None) or "",
+        "uncertainties": uncertainties if isinstance(uncertainties, list) else [],
+        "raw_text": getattr(row, "raw_text", None) or "",
+    }
+
+
 def run_invoice_agent(db: Session, run: Run) -> dict:
     if run.use_case != UseCase.INVOICE_REVIEW.value:
         raise ValueError("run_invoice_agent only for invoice_review use_case")
@@ -169,7 +193,55 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
     started = time.time()
     turn_no = 0
 
-    # Always start clean — recycled run_ids can leave orphan journal/finding rows in SQLite
+    existing_finding = db.query(Finding).filter(Finding.run_id == run.run_id).first()
+    journal_count = (
+        db.query(JournalTurn).filter(JournalTurn.run_id == run.run_id).count()
+    )
+
+    # Idempotent under Service Bus redelivery: never wipe a finished or in-flight review.
+    if existing_finding and (
+        run.state == RunState.FINDING_READY.value or journal_count > 0
+    ):
+        add_runtime_event(
+            db,
+            run_id=run.run_id,
+            stage="BAND_B",
+            component="invoice_agent",
+            action="agent_skipped_redelivery",
+            status="SUCCESS",
+            message=(
+                f"Skip re-start for {run.document_ref}: "
+                f"state={run.state} finding=yes journal_turns={journal_count}"
+            ),
+        )
+        db.commit()
+        return _finding_as_dict(existing_finding)
+
+    if journal_count > 0 and run.state == RunState.REVIEWING.value:
+        # Another worker (or prior delivery) already progressed — do not wipe.
+        add_runtime_event(
+            db,
+            run_id=run.run_id,
+            stage="BAND_B",
+            component="invoice_agent",
+            action="agent_skipped_redelivery",
+            status="SUCCESS",
+            message=(
+                f"Skip re-start for {run.document_ref}: "
+                f"in-flight REVIEWING with {journal_count} journal turn(s)"
+            ),
+        )
+        db.commit()
+        return {
+            "verdict": "exception:in_progress",
+            "checks": [],
+            "policy_ids": [],
+            "reasoning": "Redelivery skipped — review already in progress.",
+            "uncertainties": [],
+            "raw_text": "Agent already running or partially complete for this run.",
+        }
+
+    # Fresh start only when there is no journal yet
     db.query(JournalTurn).filter(JournalTurn.run_id == run.run_id).delete(synchronize_session=False)
     db.query(Finding).filter(Finding.run_id == run.run_id).delete(synchronize_session=False)
     run.budget_turns_used = 0

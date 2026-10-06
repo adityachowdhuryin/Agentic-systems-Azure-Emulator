@@ -44,11 +44,22 @@ function buildAck(bandAStatus, body) {
   }
 
   const detail = body.detail || body.error || {};
-  const message = typeof detail === 'string' ? detail : detail.message || JSON.stringify(body);
+  let message =
+    typeof detail === 'string'
+      ? detail
+      : detail && detail.message
+        ? detail.message
+        : '';
+  if (!message || message === '{}') {
+    message =
+      Object.keys(body || {}).length === 0
+        ? `Band A HTTP ${bandAStatus} with empty body (often timeout/cold start). Please retry in a moment.`
+        : JSON.stringify(body);
+  }
   if (bandAStatus === 409 && detail.existing_run_id) {
     return `Rejected — lead already has active run ${detail.existing_run_id}.`;
   }
-  return `Could not process: ${message}`;
+  return `Could not process (HTTP ${bandAStatus}): ${message}`;
 }
 
 async function sleep(ms) {
@@ -423,13 +434,21 @@ function registerTeamsBot(app, { bandAUrl, teamsBridgeKey }) {
             'X-Teams-Bridge-Key': teamsBridgeKey,
           },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(55000),
         });
         bandAStatus = response.status;
         bandABody = await response.json().catch(() => ({}));
         console.log('Band A Teams response:', bandAStatus, bandABody);
       } catch (error) {
         console.error('Failed to forward Teams message to Band A:', error.message);
-        bandABody = { detail: { message: error.message } };
+        const timedOut = error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+        bandABody = {
+          detail: {
+            message: timedOut
+              ? 'Timed out waiting for Band A (55s). App may be cold-starting — retry once.'
+              : error.message,
+          },
+        };
       }
 
       if (bandAStatus >= 200 && bandAStatus < 300 && bandABody.use_case === 'invoice_review') {

@@ -301,3 +301,106 @@ def test_use_maf_falls_back_when_package_missing(db, monkeypatch):
     assert final["verdict"] == "clean"
     mock_maf.assert_not_called()
     mock_responses.assert_called()
+
+
+def test_agent_skips_restart_when_finding_ready(db):
+    """Service Bus redelivery must not wipe a finished review."""
+    from app.band_b.journal import save_finding
+    from app.database import RuntimeEvent
+
+    run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
+    save_finding(
+        db,
+        run_id=run.run_id,
+        verdict="clean",
+        checks=[{"what": "po", "result": "ok"}],
+        policy_ids=["POL-1"],
+        reasoning="done",
+        uncertainties=[],
+        raw_text="done",
+        policy_choice_reason="",
+    )
+    run.state = RunState.FINDING_READY.value
+    db.commit()
+
+    with patch("app.band_b.agent_loop._invoke_model") as mock_model:
+        final = run_invoice_agent(db, run)
+
+    assert final["verdict"] == "clean"
+    mock_model.assert_not_called()
+    events = (
+        db.query(RuntimeEvent)
+        .filter(
+            RuntimeEvent.run_id == run.run_id,
+            RuntimeEvent.action == "agent_skipped_redelivery",
+        )
+        .all()
+    )
+    assert len(events) >= 1
+
+
+def test_agent_skips_wipe_when_reviewing_with_journal(db):
+    from app.band_b.journal import record_turn
+    from app.database import RuntimeEvent
+
+    run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
+    run.state = RunState.REVIEWING.value
+    record_turn(
+        db,
+        run_id=run.run_id,
+        turn_no=1,
+        saw={},
+        decided="call:extract_invoice",
+        tool_name="extract_invoice",
+        tool_args={"document_ref": "docs/CASE-01.pdf"},
+        tool_result={"status": "intent_recorded"},
+    )
+    db.commit()
+
+    with patch("app.band_b.agent_loop._invoke_model") as mock_model:
+        final = run_invoice_agent(db, run)
+
+    assert final["verdict"] == "exception:in_progress"
+    mock_model.assert_not_called()
+    from app.band_b.journal import list_turns
+
+    assert len(list_turns(db, run.run_id)) == 1
+    events = (
+        db.query(RuntimeEvent)
+        .filter(RuntimeEvent.action == "agent_skipped_redelivery")
+        .all()
+    )
+    assert len(events) >= 1
+
+
+def test_stable_live_token_without_message_id():
+    from app.ingestion.invoice_case_adapter import _stable_live_token
+
+    a = _stable_live_token(
+        message_id="",
+        mail_from="ap@vendor.com",
+        subject="Invoice INV-1",
+        document_ref="doc-1",
+        body="hello invoice",
+        invoice_number="INV-1",
+    )
+    b = _stable_live_token(
+        message_id="",
+        mail_from="ap@vendor.com",
+        subject="Invoice INV-1",
+        document_ref="doc-1",
+        body="hello invoice",
+        invoice_number="INV-1",
+    )
+    c = _stable_live_token(
+        message_id="",
+        mail_from="other@vendor.com",
+        subject="Invoice INV-1",
+        document_ref="doc-1",
+        body="hello invoice",
+        invoice_number="INV-1",
+    )
+    assert a == b
+    assert a.startswith("h:")
+    assert a != c
+    assert _stable_live_token(message_id="mid-123") == "mid-123"

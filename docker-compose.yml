@@ -11,12 +11,13 @@ services:
       - DATABASE_URL=sqlite:////app/data/band_a.db
       - CORS_ORIGINS=*
       - ALWAYS_QUEUE=true
-      - WORKER_AUTOSTART=true
+      - WORKER_AUTOSTART=false
       - QUEUE_BACKEND=sqlite
       - MOCK_SYSTEMS_URL=http://mocks:8090
     working_dir: /app/backend
     depends_on:
       - mocks
+    # Band B runs in the dedicated `worker` service — keep one consumer only.
 
   worker:
     build:

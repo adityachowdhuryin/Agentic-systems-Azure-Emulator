@@ -141,17 +141,27 @@ async def _call_model_maf_async(messages: list[dict[str, Any]]) -> MafModelRespo
     from agent_framework import ChatOptions
 
     client = _foundry_client()
-    maf_messages = _messages_to_maf(messages)
-    tools = _build_schema_tools()
-    instructions = ""
-    for m in messages:
-        if m.get("role") == "system":
-            instructions = str(m.get("content") or "")
-            break
+    try:
+        maf_messages = _messages_to_maf(messages)
+        tools = _build_schema_tools()
+        instructions = ""
+        for m in messages:
+            if m.get("role") == "system":
+                instructions = str(m.get("content") or "")
+                break
 
-    options = ChatOptions(tools=tools, instructions=instructions or None)
-    resp = await client.get_response(maf_messages, options=options)
-    return _chat_response_to_maf(resp)
+        options = ChatOptions(tools=tools, instructions=instructions or None)
+        resp = await client.get_response(maf_messages, options=options)
+        return _chat_response_to_maf(resp)
+    finally:
+        close = getattr(client, "close", None) or getattr(client, "aclose", None)
+        if close is not None:
+            try:
+                result = close()
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception:
+                logger.debug("FoundryChatClient close failed", exc_info=True)
 
 
 def _call_model_maf(messages: list[dict[str, Any]]) -> MafModelResponse:
@@ -159,11 +169,32 @@ def _call_model_maf(messages: list[dict[str, Any]]) -> MafModelResponse:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(_call_model_maf_async(messages))
-    raise RuntimeError(
-        "_call_model_maf cannot run inside an active event loop; "
-        "call _call_model_maf_async from async code"
-    )
+        pass
+    else:
+        raise RuntimeError(
+            "_call_model_maf cannot run inside an active event loop; "
+            "call _call_model_maf_async from async code"
+        )
+
+    # Fresh loop per turn — avoids "Event loop is closed" from reused httpx/AF clients
+    # after asyncio.run() tears down the previous loop.
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(_call_model_maf_async(messages))
+    finally:
+        try:
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            logger.debug("MAF event-loop cleanup failed", exc_info=True)
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
 
 
 def build_maf_tools(execute_tool: Callable[[str, dict], Any]) -> list:

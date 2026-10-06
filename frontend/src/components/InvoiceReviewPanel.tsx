@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton } from "./ActionButton";
 import { StatusBadge } from "./StatusBadge";
+import { TrashIcon } from "./TrashIcon";
 import {
   ApiError,
   chatInvoiceCase,
@@ -14,6 +15,7 @@ import {
   fetchRunInboundMail,
   fetchRunInboundTeams,
   ingestInvoiceCase,
+  deleteRun,
   startWorker,
   type InvoiceCase,
   type InvoiceFinding,
@@ -28,6 +30,8 @@ type Props = {
   tenant: string;
   resetNonce?: number;
   onBanner: (message: string, type: "success" | "error" | "info", autoDismiss?: boolean) => void;
+  /** Clear sticky error banners after a successful runs/cases poll. */
+  onClearErrorBanner?: () => void;
   onWatchRun: (runId: string | null) => void;
 };
 
@@ -44,16 +48,44 @@ const DEMO_STEPS = [
 ] as const;
 
 const COMPARISON_ROWS: { piece: string; platform: string; ours: string }[] = [
-  { piece: "Agent loop", platform: "Responses API + tools", ours: "Hand-rolled while + budgets" },
+  {
+    piece: "Agent loop",
+    platform: "Foundry + Agent Framework (FoundryChatClient)",
+    ours: "While-loop + budgets; MAF one turn via _invoke_model (Responses fallback)",
+  },
   { piece: "Tool registry", platform: "Function schemas on call", ours: "Hard allowlist of 7" },
-  { piece: "Connectors", platform: "nothing", ours: "HTTP → mocks :8090" },
+  {
+    piece: "Connectors",
+    platform: "nothing",
+    ours: "HTTP → mocks (:8090 local / ACA mocks on Azure)",
+  },
   { piece: "Policy gate", platform: "nothing", ours: "Independent policy_gate.py" },
   { piece: "Credential broker", platform: "nothing", ours: "Mint only after journal intent" },
-  { piece: "Journal", platform: "nothing", ours: "SQLite saw / decided / called / result" },
+  {
+    piece: "Journal",
+    platform: "nothing",
+    ours: "saw / decided / called / result (SQLite local · Azure SQL on cloud)",
+  },
   { piece: "Replay", platform: "nothing", ours: "0 model calls · $0" },
   { piece: "Context", platform: "nothing", ours: "Rebuild each turn; door never passed" },
   { piece: "Limits", platform: "nothing", ours: "Turns · money · wall-clock" },
   { piece: "Finding", platform: "nothing", ours: "Structured JSON + UI" },
+  {
+    piece: "Live doors",
+    platform: "nothing (your ingress)",
+    ours: "Zoho Mail + Teams bot → Band A webhooks (Azure HTTPS / local bridge)",
+  },
+];
+
+const ARCHITECTURE_ROWS: { piece: string; detail: string }[] = [
+  { piece: "Band A", detail: "Ingress · admission · run · dispatch — no AI (FastAPI banda)" },
+  { piece: "Band B", detail: "Invoice worker — Agent Framework → Foundry gpt-5-mini + 7 tools" },
+  { piece: "Queue", detail: "SQLite local · Azure Service Bus invoice-review / sales-lead" },
+  { piece: "Model path", detail: "AGENT_RUNTIME=maf → FoundryChatClient; responses = fallback" },
+  { piece: "Mocks", detail: "Fake ERP / extract / policy (local :8090 or ACA mocks)" },
+  { piece: "Data", detail: "SQLite + uploads local · Azure SQL + Blob documents on cloud" },
+  { piece: "Identity", detail: "az login local · Managed Identity (asl-invoice-mi) on Azure" },
+  { piece: "Doors", detail: "CASE email · chat · live Zoho · live Teams" },
 ];
 
 function doorLabel(arrival?: string | null) {
@@ -86,7 +118,13 @@ function HealthPill({ label, ok, detail }: { label: string; ok: boolean; detail?
   );
 }
 
-export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRun }: Props) {
+export function InvoiceReviewPanel({
+  tenant,
+  resetNonce = 0,
+  onBanner,
+  onClearErrorBanner,
+  onWatchRun,
+}: Props) {
   const [cases, setCases] = useState<InvoiceCase[]>([]);
   const [runs, setRuns] = useState<InvoiceRunSummary[]>([]);
   const [selectedCase, setSelectedCase] = useState("CASE-03");
@@ -104,11 +142,17 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
   const [flashTurn, setFlashTurn] = useState<number | null>(null);
   const [showRaw, setShowRaw] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [showArchitecture, setShowArchitecture] = useState(false);
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [investigateStartedAt, setInvestigateStartedAt] = useState<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
   const journalRef = useRef<HTMLDivElement>(null);
   const knownRunIdsRef = useRef<Set<string>>(new Set());
   const seededRunsRef = useRef(false);
+  const onBannerRef = useRef(onBanner);
+  onBannerRef.current = onBanner;
+  const onClearErrorBannerRef = useRef(onClearErrorBanner);
+  onClearErrorBannerRef.current = onClearErrorBanner;
 
   const clearSelection = useCallback(() => {
     setActiveRunId(null);
@@ -124,6 +168,8 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
 
   const refresh = useCallback(async () => {
     const [c, r] = await Promise.all([fetchInvoiceCases(), fetchInvoiceRuns(tenant)]);
+    // Successful poll — drop sticky "Failed to fetch" from an earlier cold-start blip.
+    onClearErrorBannerRef.current?.();
     setCases(c.cases);
     setRuns(r);
     setSelectedCase((prev) => prev || c.cases.find((x) => x.case_id === "CASE-03")?.case_id || c.cases[0]?.case_id || "");
@@ -144,7 +190,7 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
         autoPick = newcomers[0].run_id;
         setReplay(null);
         const door = newcomers[0].arrival_source === "teams" ? "Teams" : "Zoho";
-        onBanner(`Live ${door} → ${autoPick}`, "success");
+        onBannerRef.current(`Live ${door} → ${autoPick}`, "success");
       }
     }
 
@@ -162,18 +208,22 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
       }
       return prev;
     });
-  }, [tenant, onWatchRun, onBanner]);
+  }, [tenant, onWatchRun]);
 
   useEffect(() => {
     knownRunIdsRef.current = new Set();
     seededRunsRef.current = false;
     clearSelection();
-    void refresh().catch((e) => onBanner(e instanceof Error ? e.message : "Load failed", "error", false));
+    void refresh().catch((e) =>
+      onBannerRef.current(e instanceof Error ? e.message : "Load failed", "error", false)
+    );
   }, [resetNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    void refresh().catch((e) => onBanner(e instanceof Error ? e.message : "Load failed", "error", false));
-  }, [refresh, onBanner]);
+    void refresh().catch((e) =>
+      onBannerRef.current(e instanceof Error ? e.message : "Load failed", "error", false)
+    );
+  }, [refresh]);
 
   // Live Zoho / external arrivals — runs list must poll (not only refresh on mount/actions)
   useEffect(() => {
@@ -361,6 +411,34 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
     });
   };
 
+  const handleDeleteRun = async (runId: string) => {
+    if (!window.confirm(`Delete run ${runId}? This cannot be undone.`)) return;
+    setDeletingRunId(runId);
+    try {
+      await deleteRun(runId);
+      if (activeRunId === runId) {
+        setActiveRunId(null);
+        setFinding(null);
+        setInboundMail(null);
+        setInboundTeams(null);
+        setTurns([]);
+        setReplay(null);
+        setFlashTurn(null);
+        onWatchRun(null);
+      }
+      setCompareIds(([a, b]) => [a === runId ? null : a, b === runId ? null : b]);
+      knownRunIdsRef.current.delete(runId);
+      await refresh();
+      onBanner(`Deleted ${runId}`, "success");
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Delete failed";
+      onBanner(msg, "error", false);
+    } finally {
+      setDeletingRunId(null);
+    }
+  };
+
   const handleEmailIngest = () =>
     run("email", async () => {
       if (!forceSync) await startWorker();
@@ -530,32 +608,46 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
           <ul className="space-y-1 max-h-72 overflow-auto text-sm">
             {runs.map((r) => (
               <li key={r.run_id}>
-                <div
-                  className={`w-full text-left px-2 py-1.5 rounded-md hover:bg-gray-50 ${
-                    activeRunId === r.run_id ? "bg-own-tint" : ""
-                  }`}
-                >
-                  <button type="button" className="w-full text-left" onClick={() => selectRun(r.run_id)}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs">{r.run_id}</span>
-                      <StatusBadge status={r.state} />
-                    </div>
-                    <div className="text-xs text-muted truncate mt-0.5">{r.document_ref}</div>
-                  </button>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-gray-100">
-                      door:{doorLabel(r.arrival_source)}
-                    </span>
-                    <span className="font-mono text-[10px] text-muted">{r.dispatch_route}</span>
-                    <button
-                      type="button"
-                      className="ml-auto text-[10px] font-mono underline text-own"
-                      onClick={() => toggleComparePin(r.run_id)}
+                    <div
+                      className={`group w-full text-left px-2 py-1.5 rounded-md hover:bg-gray-50 ${
+                        activeRunId === r.run_id ? "bg-own-tint" : ""
+                      }`}
                     >
-                      {compareIds[0] === r.run_id || compareIds[1] === r.run_id ? "unpin" : "pin compare"}
-                    </button>
-                  </div>
-                </div>
+                      <button type="button" className="w-full text-left" onClick={() => selectRun(r.run_id)}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs">{r.run_id}</span>
+                          <StatusBadge status={r.state} />
+                        </div>
+                        <div className="text-xs text-muted truncate mt-0.5">{r.document_ref}</div>
+                      </button>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-gray-100">
+                          door:{doorLabel(r.arrival_source)}
+                        </span>
+                        <span className="font-mono text-[10px] text-muted">{r.dispatch_route}</span>
+                        <button
+                          type="button"
+                          className="ml-auto text-[10px] font-mono underline text-own"
+                          onClick={() => toggleComparePin(r.run_id)}
+                        >
+                          {compareIds[0] === r.run_id || compareIds[1] === r.run_id ? "unpin" : "pin compare"}
+                        </button>
+                        <button
+                          type="button"
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 text-invariant hover:text-invariant/80 p-0.5 disabled:opacity-50"
+                          disabled={deletingRunId === r.run_id || !!busy}
+                          onClick={() => void handleDeleteRun(r.run_id)}
+                          title={`Delete ${r.run_id}`}
+                          aria-label={`Delete run ${r.run_id}`}
+                        >
+                          {deletingRunId === r.run_id ? (
+                            <span className="font-mono text-[10px]">…</span>
+                          ) : (
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
               </li>
             ))}
             {runs.length === 0 && <li className="text-muted text-sm">No invoice runs yet</li>}
@@ -840,8 +932,8 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
         </ol>
       </div>
 
-      {/* H. Comparison table */}
-      <div className="rounded-xl border border-line bg-white p-4">
+      {/* H. Comparison tables */}
+      <div className="rounded-xl border border-line bg-white p-4 space-y-3">
         <button
           type="button"
           className="w-full flex items-center justify-between text-left"
@@ -851,7 +943,7 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
           <span className="font-mono text-xs text-muted">{showComparison ? "hide" : "show"}</span>
         </button>
         {showComparison && (
-          <div className="mt-3 overflow-auto">
+          <div className="overflow-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-hairline text-left font-mono text-xs text-muted">
@@ -872,8 +964,37 @@ export function InvoiceReviewPanel({ tenant, resetNonce = 0, onBanner, onWatchRu
             </table>
             <p className="text-xs text-muted mt-2">
               Hardest row for talk track: policy gate / broker — platform gave nothing; we built them ourselves.
-              Model on this account: {health?.model.name || "gpt-5-mini"} (gpt-4o-mini deprecated).
+              Model on this account: {health?.model.name || "gpt-5-mini"} (Agent Framework on Azure bandb).
             </p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="w-full flex items-center justify-between text-left pt-2 border-t border-hairline"
+          onClick={() => setShowArchitecture((v) => !v)}
+        >
+          <h3 className="font-semibold">Current architecture</h3>
+          <span className="font-mono text-xs text-muted">{showArchitecture ? "hide" : "show"}</span>
+        </button>
+        {showArchitecture && (
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-hairline text-left font-mono text-xs text-muted">
+                  <th className="py-1 pr-2">Piece</th>
+                  <th className="py-1">How it runs today</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ARCHITECTURE_ROWS.map((row) => (
+                  <tr key={row.piece} className="border-b border-hairline align-top">
+                    <td className="py-2 pr-2 font-medium whitespace-nowrap">{row.piece}</td>
+                    <td className="py-2 text-muted">{row.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

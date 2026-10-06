@@ -1,6 +1,7 @@
 """CASE email / chat ingress for invoice review — through Band A orchestrator."""
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -25,6 +26,36 @@ from app.security import sign_zoho_payload
 PACK_ROOT = Path(__file__).resolve().parents[3] / "Assignment_02_Pack" / "06_invoice_review_data"
 EMAILS_DIR = PACK_ROOT / "inbound" / "emails"
 CHAT_PATH = PACK_ROOT / "inbound" / "chat_queries.json"
+
+
+def _stable_live_token(
+    *,
+    message_id: str | None = None,
+    mail_from: str = "",
+    subject: str = "",
+    document_ref: str = "",
+    body: str = "",
+    invoice_number: str = "",
+) -> str:
+    """Stable idempotency fragment for live ingress event_id.
+
+    Prefer provider message_id. Never use a random UUID here — missing ids would
+    create a new run on every Zoho retry.
+    """
+    mid = (message_id or "").strip()
+    if mid:
+        return re.sub(r"\s+", "", mid)[:80]
+    material = "|".join(
+        [
+            (mail_from or "").strip().lower(),
+            (subject or "").strip().lower(),
+            (document_ref or "").strip(),
+            (invoice_number or "").strip(),
+            (body or "").strip()[:500],
+        ]
+    )
+    digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:24]
+    return f"h:{digest}"
 
 
 def list_case_emails() -> list[dict]:
@@ -231,8 +262,15 @@ def ingest_zoho_tagged_case(
         raise ValidationError(f"Unknown case email: {case_id}")
     raw_email = dict(json.loads(path.read_text()))
     zoho_mid = (live_mail.get("message_id") or "").strip()
-    # Unique event so Zoho resends / CASE player don't collide
-    raw_email["message_id"] = f"zoho-mail:{case_id}:{zoho_mid or new_correlation_id()}"
+    # Unique event so Zoho resends / CASE player don't collide — stable when mid missing
+    stable = _stable_live_token(
+        message_id=zoho_mid,
+        mail_from=str(live_mail.get("from") or ""),
+        subject=str(live_mail.get("subject") or ""),
+        document_ref=case_id,
+        body=str(live_mail.get("body") or ""),
+    )
+    raw_email["message_id"] = f"zoho-mail:{case_id}:{stable}"
     raw_email["live_mail"] = {
         "from": live_mail.get("from"),
         "to": live_mail.get("to"),
@@ -279,7 +317,15 @@ def ingest_zoho_live_invoice(
     _ensure_invoice_lead(db, lead_id=lead_id, supplier=supplier, tenant_id=tenant_id)
 
     zoho_mid = (live_mail.get("message_id") or "").strip()
-    event_id = f"zoho-live:{document_ref}:{zoho_mid or new_correlation_id()}"
+    stable = _stable_live_token(
+        message_id=zoho_mid,
+        mail_from=str(live_mail.get("from") or ""),
+        subject=str(live_mail.get("subject") or ""),
+        document_ref=document_ref,
+        body=str(live_mail.get("body") or ""),
+        invoice_number=str(invoice.get("invoice_number") or ""),
+    )
+    event_id = f"zoho-live:{document_ref}:{stable}"
     event_id = re.sub(r"\s+", "", event_id)[:120]
 
     budgets = default_invoice_budgets()
@@ -369,7 +415,15 @@ def ingest_teams_live_invoice(
     _ensure_invoice_lead(db, lead_id=lead_id, supplier=supplier, tenant_id=tenant_id)
 
     activity_id = (live_teams.get("activity_id") or "").strip()
-    event_id = f"teams-live:{document_ref}:{activity_id or new_correlation_id()}"
+    stable = _stable_live_token(
+        message_id=activity_id,
+        mail_from=str(live_teams.get("from_id") or live_teams.get("from_name") or ""),
+        subject="",
+        document_ref=document_ref,
+        body=str(live_teams.get("text") or ""),
+        invoice_number=str(invoice.get("invoice_number") or ""),
+    )
+    event_id = f"teams-live:{document_ref}:{stable}"
     event_id = re.sub(r"\s+", "", event_id)[:120]
 
     budgets = default_invoice_budgets()
@@ -469,7 +523,23 @@ def ingest_live_non_invoice(
         mid = (live_mail.get("message_id") or "").strip()
     elif live_teams:
         mid = (live_teams.get("activity_id") or "").strip()
-    event_id = f"live-noninv:{document_ref}:{mid or new_correlation_id()}"
+    stable = _stable_live_token(
+        message_id=mid,
+        mail_from=str(
+            (live_mail or {}).get("from")
+            or (live_teams or {}).get("from_id")
+            or (live_teams or {}).get("from_name")
+            or ""
+        ),
+        subject=str((live_mail or {}).get("subject") or ""),
+        document_ref=document_ref,
+        body=str(
+            (live_mail or {}).get("body")
+            or (live_teams or {}).get("text")
+            or ""
+        ),
+    )
+    event_id = f"live-noninv:{document_ref}:{stable}"
     event_id = re.sub(r"\s+", "", event_id)[:120]
 
     budgets = default_invoice_budgets()

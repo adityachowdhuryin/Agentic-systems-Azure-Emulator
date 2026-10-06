@@ -53,6 +53,13 @@ async def teams_inbound_webhook(
     except BandAError as exc:
         db.commit()
         raise HTTPException(exc.status_code, detail=band_a_error_detail(exc)) from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Teams webhook failed correlation_id=%s", correlation_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Teams ingest failed: {type(exc).__name__}: {str(exc)[:400]}",
+        ) from exc
 
 
 @router.get("/ingestion-logs", response_model=IngestionLogsResponse)
