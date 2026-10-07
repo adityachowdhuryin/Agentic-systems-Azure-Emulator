@@ -71,6 +71,15 @@ Shape:
 """
 
 
+def redact_inbound_kind(payload: Any) -> Any:
+    """Drop inbound_kind from tool/extract payloads (free-form A/B when steer is off)."""
+    if not isinstance(payload, dict):
+        return payload
+    out = dict(payload)
+    out.pop("inbound_kind", None)
+    return out
+
+
 def build_turn_messages(
     *,
     document_ref: str,
@@ -78,7 +87,10 @@ def build_turn_messages(
     prior_turns: list[dict[str, Any]],
     inbound_kind: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Rebuild context: system + goal + compact prior tool trail + last result."""
+    """Rebuild context: system + goal + compact prior tool trail + last result.
+
+    Pass inbound_kind='non_invoice' only when INBOUND_KIND_STEER is enabled (caller).
+    """
     goal = (
         f"Review invoice document_ref={document_ref}. "
         f"Verified supplier_id={supplier_id or 'unknown'}. "

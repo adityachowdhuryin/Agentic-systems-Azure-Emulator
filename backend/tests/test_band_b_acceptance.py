@@ -173,6 +173,31 @@ def test_t6_context_rebuild_no_arrival_door():
     assert "get_purchase_order" in blob
 
 
+def test_inbound_kind_steer_goal_vs_free_form():
+    from app.band_b.context import redact_inbound_kind
+
+    steered = build_turn_messages(
+        document_ref="live-NONINV-x",
+        supplier_id="SUP-1001",
+        prior_turns=[],
+        inbound_kind="non_invoice",
+    )
+    assert "inbound_kind=non_invoice" in steered[1]["content"]
+
+    free = build_turn_messages(
+        document_ref="live-NONINV-x",
+        supplier_id="SUP-1001",
+        prior_turns=[],
+        inbound_kind=None,
+    )
+    assert "inbound_kind=non_invoice" not in free[1]["content"]
+    assert "Investigate and produce a finding" in free[1]["content"]
+
+    redacted = redact_inbound_kind({"inbound_kind": "non_invoice", "raw_text": "hi", "lines": []})
+    assert "inbound_kind" not in redacted
+    assert redacted["raw_text"] == "hi"
+
+
 def test_t4_budget_fields_on_run(db):
     run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
     assert run.budget_turns == 3

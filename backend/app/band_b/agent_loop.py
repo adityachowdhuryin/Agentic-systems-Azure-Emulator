@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.band_b.broker import mint_credential
 from app.band_b.connectors import MockConnectors
-from app.band_b.context import build_turn_messages
+from app.band_b.context import build_turn_messages, redact_inbound_kind
 from app.band_b.journal import record_turn, save_finding
 from app.band_b.maf_runtime import _call_model_maf, use_maf
 from app.band_b.policy_gate import check_tool_allowed
@@ -255,13 +255,19 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
         component="invoice_agent",
         action="agent_started",
         status="SUCCESS",
-        message=f"Invoice review agent started for {run.document_ref} (runtime={'maf' if use_maf() else 'responses'})",
+        message=(
+            f"Invoice review agent started for {run.document_ref} "
+            f"(runtime={'maf' if use_maf() else 'responses'}, "
+            f"inbound_kind_steer={'on' if settings.inbound_kind_steer else 'off'})"
+        ),
     )
     db.commit()
 
     prior: list[dict] = []
     final: dict | None = None
     inbound_kind = _inbound_kind_for_run(db, run)
+    # Goal steer + extract-field leak only when flag on (default). Off = free-form A/B.
+    steer_kind = inbound_kind if settings.inbound_kind_steer else None
 
     while True:
         elapsed = time.time() - started
@@ -322,12 +328,13 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
             document_ref=run.document_ref or "",
             supplier_id=run.supplier_id,
             prior_turns=prior,
-            inbound_kind=inbound_kind,
+            inbound_kind=steer_kind,
         )
         saw = {
             "document_ref": run.document_ref,
             "supplier_id": run.supplier_id,
             "inbound_kind": inbound_kind,
+            "inbound_kind_steer": settings.inbound_kind_steer,
             "prior_tool_count": len([p for p in prior if p.get("tool_name")]),
         }
 
@@ -459,11 +466,14 @@ def run_invoice_agent(db: Session, run: Run) -> dict:
                     "_broker": {"credential_kind": "b1", "token_prefix": cred[:24]},
                 }
             intent_turn.tool_result_json = json.dumps(journal_result)
+            model_result = result
+            if not settings.inbound_kind_steer and isinstance(result, dict):
+                model_result = redact_inbound_kind(result)
             prior.append(
                 {
                     "decided": f"call:{tool_name}",
                     "tool_name": tool_name,
-                    "tool_result": result,
+                    "tool_result": model_result,
                 }
             )
             db.commit()

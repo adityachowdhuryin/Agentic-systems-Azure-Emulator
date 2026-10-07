@@ -30,6 +30,7 @@
 
 - **Broker secret** — Key Vault `broker-hmac-secret` is wired to ACA `bandb` and `mocks` as `BROKER_HMAC_SECRET=secretref:broker-hmac-secret`. Band B mints short-lived `b1.*` tokens; mocks verify with the same secret. Local emulator keeps the lab default secret for convenience; Azure never uses that placeholder.
 - **`ALWAYS_QUEUE=true`** — intentional. Band A always durable-handoffs to Service Bus. Teams gets a fast ack (“investigating…”) then the bridge **polls** `/finding` and replies when ready — not a same-HTTP-connection Band B result (cold-start friendly Azure shape).
+- **`INBOUND_KIND_STEER=false` on live `bandb`** — free-form non-invoice path (no goal steer; `inbound_kind` redacted from model-facing tool trail). Code default remains `true` for local; Azure overrides via ACA env. Set `true` on `bandb` to restore the steered goal.
 
 ## Manual step for you
 
