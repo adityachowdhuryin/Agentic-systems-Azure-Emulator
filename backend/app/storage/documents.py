@@ -38,16 +38,27 @@ class LocalDocumentStore:
 
 class BlobDocumentStore:
     def __init__(self):
-        from azure.identity import DefaultAzureCredential
+        from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
         from azure.storage.blob import BlobServiceClient
 
-        account = settings.azure_storage_account
+        account = (
+            os.environ.get("AZURE_STORAGE_ACCOUNT") or settings.azure_storage_account
+        )
         if not account:
             raise RuntimeError("AZURE_STORAGE_ACCOUNT required for blob document store")
-        cred = DefaultAzureCredential()
+        # Prefer the user-assigned MI pinned on ACA (AZURE_CLIENT_ID).
+        client_id = os.environ.get("AZURE_CLIENT_ID")
+        if client_id:
+            cred = ManagedIdentityCredential(client_id=client_id)
+        else:
+            cred = DefaultAzureCredential()
         url = f"https://{account}.blob.core.windows.net"
         self._client = BlobServiceClient(url, credential=cred)
-        self._container = settings.azure_blob_container
+        self._container = (
+            os.environ.get("AZURE_BLOB_CONTAINER")
+            or settings.azure_blob_container
+            or "documents"
+        )
         try:
             self._client.create_container(self._container)
         except Exception:
@@ -69,7 +80,12 @@ class BlobDocumentStore:
 
 
 def get_document_store() -> DocumentStore:
-    backend = (settings.document_store_backend or "local").lower()
+    # Prefer live ACA env over import-time settings default (local).
+    backend = (
+        os.environ.get("DOCUMENT_STORE_BACKEND")
+        or settings.document_store_backend
+        or "local"
+    ).lower()
     if backend == "blob":
         return BlobDocumentStore()
     return LocalDocumentStore()

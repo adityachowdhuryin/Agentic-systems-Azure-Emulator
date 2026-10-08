@@ -89,7 +89,10 @@ def _delivery_count(msg) -> int | None:
 def _loop_servicebus() -> None:
     from azure.servicebus import AutoLockRenewer, ServiceBusClient
 
+    from app.band_b.broker import secret_fingerprint
     from app.config import settings
+
+    logger.info("Broker HMAC secret fingerprint=%s (must match mocks)", secret_fingerprint())
 
     conn = settings.servicebus_connection_string
     ns = settings.servicebus_fully_qualified_namespace

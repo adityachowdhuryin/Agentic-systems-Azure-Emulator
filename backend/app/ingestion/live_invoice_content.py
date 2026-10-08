@@ -222,17 +222,27 @@ def build_non_invoice_document(
     attachment_filename: str = "",
     subject: str = "",
 ) -> dict[str, Any]:
-    """Stored extract payload for unrelated live inbound (agent should reject)."""
+    """Stored extract payload for unrelated live inbound (agent should reject).
+
+    When settings.inbound_kind_tag is False, omit inbound_kind so Band B must
+    infer non-invoice from missing essentials / raw_text only.
+    """
+    from app.config import settings
+
     text = (raw_text or "").strip() or "(empty message)"
-    return {
-        "inbound_kind": "non_invoice",
+    doc: dict[str, Any] = {
         "invoice_number": "NONINV",
         "raw_text": text[:8000],
         "attachment_filename": attachment_filename or "",
         "mail_subject": subject or "",
-        "note": "Unstructured inbound; not a pack-shaped supplier invoice",
         "lines": [],
     }
+    if settings.inbound_kind_tag:
+        doc["inbound_kind"] = "non_invoice"
+        doc["note"] = "Unstructured inbound; not a pack-shaped supplier invoice"
+    else:
+        doc["note"] = "Unstructured inbound message"
+    return doc
 
 
 def resolve_non_invoice_from_mail(

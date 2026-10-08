@@ -159,7 +159,7 @@ class TeamsInboundAdapter:
             )
         except ValidationError:
             raise
-        return {
+        out = {
             "use_case": "invoice_review",
             "run_id": result.get("run_id"),
             "state": result.get("state"),
@@ -169,9 +169,11 @@ class TeamsInboundAdapter:
             "correlation_id": result.get("correlation_id") or correlation_id,
             "duplicate": result.get("duplicate", False),
             "rejected": result.get("rejected", False),
-            "inbound_kind": "non_invoice",
             "parsed_teams": parsed,
         }
+        if result.get("inbound_kind"):
+            out["inbound_kind"] = result["inbound_kind"]
+        return out
 
     def _process_sales_lead(
         self,

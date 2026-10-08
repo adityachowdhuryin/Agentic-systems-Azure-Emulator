@@ -28,9 +28,10 @@
 
 ## Broker HMAC (T5) + queueing (Plan 3A)
 
-- **Broker secret** — Key Vault `broker-hmac-secret` is wired to ACA `bandb` and `mocks` as `BROKER_HMAC_SECRET=secretref:broker-hmac-secret`. Band B mints short-lived `b1.*` tokens; mocks verify with the same secret. Local emulator keeps the lab default secret for convenience; Azure never uses that placeholder.
+- **Broker secret** — Key Vault `broker-hmac-secret` is wired to ACA `bandb` and `mocks` via **identity-linked Key Vault refs** (`keyVaultUrl` + `asl-invoice-mi`), then `BROKER_HMAC_SECRET=secretref:broker-hmac-secret`. Both apps must share that one secret (fingerprint logged at startup). Local emulator keeps the lab default. Demo workaround of plain `local-broker-hmac-secret-change-me` must not stay on Azure.
+- **Live extract** — Teams/Zoho `live-*` documents are read from Blob/SQL (not mocks disk). Avoids extract-401 noise when mocks HMAC/fixtures are wrong; ERP/policy still use broker tokens against mocks.
 - **`ALWAYS_QUEUE=true`** — intentional. Band A always durable-handoffs to Service Bus. Teams gets a fast ack (“investigating…”) then the bridge **polls** `/finding` and replies when ready — not a same-HTTP-connection Band B result (cold-start friendly Azure shape).
-- **`INBOUND_KIND_STEER=false` on live `bandb`** — free-form non-invoice path (no goal steer; `inbound_kind` redacted from model-facing tool trail). Code default remains `true` for local; Azure overrides via ACA env. Set `true` on `bandb` to restore the steered goal.
+- **`INBOUND_KIND_STEER` / `INBOUND_KIND_TAG`** — Both **`false`** on live `banda` + `bandb` (revisions `banda--livefix154153` / `bandb--livefix154153`). Unstructured Teams/Zoho gets no `inbound_kind` tag and no Band B goal steer; the agent infers `exception:not_an_invoice` from extract content only. Defaults in code remain `true` for local demos unless you export the flags.
 
 ## Manual step for you
 

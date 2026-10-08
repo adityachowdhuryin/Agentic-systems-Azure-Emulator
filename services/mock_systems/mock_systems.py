@@ -32,7 +32,28 @@ def need(token, expected, system):
     }.get(expected)
     if scope_for_static and _broker_token_ok(token, scope_for_static):
         return
+    # Ops hint only — never log the secret or full token.
+    prefix = (token or "")[:24]
+    import logging
+    logging.getLogger("mocks.auth").warning(
+        "%s auth failed token_prefix=%r expected_static=%s broker_fp=%s",
+        system,
+        prefix,
+        expected,
+        broker_secret_fingerprint(),
+    )
     raise HTTPException(401, f"{system}: invalid or wrongly-scoped credential")
+
+
+def _broker_secret() -> str:
+    return (os.environ.get("BROKER_HMAC_SECRET") or "local-broker-hmac-secret-change-me").strip()
+
+
+def broker_secret_fingerprint() -> str:
+    raw = _broker_secret()
+    if not raw:
+        return "empty"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
 def _broker_token_ok(token, expected_scope):
@@ -52,7 +73,7 @@ def _broker_token_ok(token, expected_scope):
         return False
     if int(time.time()) > exp:
         return False
-    secret = os.environ.get("BROKER_HMAC_SECRET", "local-broker-hmac-secret-change-me")
+    secret = _broker_secret()
     expected_mac = hmac.new(
         secret.encode(),
         f"{scope}:{run_id}:{exp}".encode(),
@@ -249,6 +270,13 @@ def list_corrections(invoice_number: str = None, x_credential: str = Header(None
 def set_faults(on: bool):
     FAULTS["enabled"] = on
     return {"faults_enabled": on}
+
+
+@app.get("/health")
+def health():
+    """Ops check — fingerprint must match bandb worker logs (not the secret itself)."""
+    return {"status": "ok", "broker_secret_fingerprint": broker_secret_fingerprint()}
+
 
 if __name__ == "__main__":
     import uvicorn

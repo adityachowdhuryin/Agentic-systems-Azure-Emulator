@@ -42,7 +42,18 @@ def scope_for_tool(tool_name: str) -> str | None:
 
 
 def _secret() -> str:
-    return settings.broker_hmac_secret
+    # Prefer live env (ACA secretRef / plain env) over import-time settings default.
+    import os
+
+    return (os.environ.get("BROKER_HMAC_SECRET") or settings.broker_hmac_secret or "").strip()
+
+
+def secret_fingerprint() -> str:
+    """Short non-secret fingerprint so ops can confirm bandb/mocks share one secret."""
+    raw = _secret()
+    if not raw:
+        return "empty"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
 def _sign(scope: str, run_id: str, exp: int) -> str:

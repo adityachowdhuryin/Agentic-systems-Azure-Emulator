@@ -564,12 +564,13 @@ def ingest_live_non_invoice(
         "arrival_source": arrival_source,
         "auth_results": {"spf": "pass", "dkim": "pass", "dmarc": "pass", "source": "live_non_invoice"},
         "live_invoice": True,
-        "inbound_kind": "non_invoice",
         "invoice_content": invoice_content,
         "invoice_source": invoice_source,
         "attachment_filename": attachment_filename,
         **budgets,
     }
+    if settings.inbound_kind_tag:
+        inner_payload["inbound_kind"] = "non_invoice"
     if live_mail:
         inner_payload.update(
             {
@@ -632,7 +633,8 @@ def ingest_live_non_invoice(
     result["supplier_id"] = supplier["supplier_id"]
     result["use_case"] = UseCase.INVOICE_REVIEW.value
     result["arrival_source"] = arrival_source
-    result["inbound_kind"] = "non_invoice"
+    if settings.inbound_kind_tag:
+        result["inbound_kind"] = "non_invoice"
     return result
 
 

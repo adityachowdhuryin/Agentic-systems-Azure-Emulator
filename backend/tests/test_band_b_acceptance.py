@@ -198,6 +198,21 @@ def test_inbound_kind_steer_goal_vs_free_form():
     assert redacted["raw_text"] == "hi"
 
 
+def test_inbound_kind_tag_omitted_from_stored_document(monkeypatch):
+    from app.config import settings
+    from app.ingestion.live_invoice_content import build_non_invoice_document
+
+    monkeypatch.setattr(settings, "inbound_kind_tag", False)
+    doc = build_non_invoice_document(raw_text="what is weather today?", subject="Teams message")
+    assert "inbound_kind" not in doc
+    assert doc["raw_text"].startswith("what is weather")
+    assert doc["lines"] == []
+
+    monkeypatch.setattr(settings, "inbound_kind_tag", True)
+    tagged = build_non_invoice_document(raw_text="hi")
+    assert tagged.get("inbound_kind") == "non_invoice"
+
+
 def test_t4_budget_fields_on_run(db):
     run = db.query(Run).filter(Run.run_id == "RUN-TEST-001").one()
     assert run.budget_turns == 3

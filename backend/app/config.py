@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     # When true (default): non_invoice runs get an explicit goal steer in Band B.
     # Set INBOUND_KIND_STEER=false for A/B: agent must infer from extract only.
     inbound_kind_steer: bool = True
+    # When true (default): Band A stores inbound_kind=non_invoice on unstructured live docs.
+    # Set INBOUND_KIND_TAG=false for full free-form: no classification field on the document/payload.
+    inbound_kind_tag: bool = True
     invoice_budget_turns: int = 20
     invoice_budget_usd_cents: int = 100  # $1.00 — gpt-5 turns are slower/costlier than mini
     invoice_budget_seconds: int = 300  # wall-clock; gpt-5 tool loops need headroom

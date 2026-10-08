@@ -239,7 +239,7 @@ class ZohoMailAdapter:
             )
         except ValidationError as exc:
             raise ValidationError(str(exc)) from exc
-        return {
+        out = {
             "use_case": "invoice_review",
             "run_id": result.get("run_id"),
             "state": result.get("state"),
@@ -250,9 +250,11 @@ class ZohoMailAdapter:
             "duplicate": result.get("duplicate", False),
             "rejected": result.get("rejected", False),
             "live_invoice": True,
-            "inbound_kind": "non_invoice",
             "parsed_mail": parsed,
         }
+        if result.get("inbound_kind"):
+            out["inbound_kind"] = result["inbound_kind"]
+        return out
 
     def _process_sales_lead_mail(
         self,
